@@ -3,6 +3,7 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using NServiceBus.Timeout.Core;
     using Raven.Abstractions.Data;
     using Raven.Client;
@@ -24,10 +25,10 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
         public TimeSpan CleanupGapFromTimeslice { get; set; }
         public TimeSpan TriggerCleanupEvery { get; set; }
 
-        public IEnumerable<Tuple<string, DateTime>> GetNextChunk(DateTime startSlice, out DateTime nextTimeToRunQuery)
+        public Task<TimeoutsChunk> GetNextChunk(DateTime startSlice)
         {
             var now = DateTime.UtcNow;
-            List<Tuple<string, DateTime>> results;
+            List<TimeoutsChunk.Timeout> results;
 
             // Allow for occasionally cleaning up old timeouts for edge cases where timeouts have been
             // added after startSlice have been set to a later timout and we might have missed them
@@ -38,11 +39,11 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
             }
             else
             {
-                results = new List<Tuple<string, DateTime>>();
+                results = new List<TimeoutsChunk.Timeout>();
             }
 
             // default return value for when no results are found
-            nextTimeToRunQuery = DateTime.UtcNow.AddMinutes(10);
+            var nextTimeToRunQuery = DateTime.UtcNow.AddMinutes(10);
 
             using (var session = documentStore.OpenSession())
             {
@@ -67,7 +68,7 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
                             break; // break on first future timeout
                         }
 
-                        results.Add(new Tuple<string, DateTime>(enumerator.Current.Document.Id, dateTime));
+                        results.Add(new TimeoutsChunk.Timeout(enumerator.Current.Document.Id, dateTime));
                     }
                 }
 
@@ -78,10 +79,10 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
                 }
             }
 
-            return results;
+            return Task.FromResult(new TimeoutsChunk(results, nextTimeToRunQuery));
         }
 
-        public IEnumerable<Tuple<string, DateTime>> GetCleanupChunk(DateTime startSlice)
+        public IEnumerable<TimeoutsChunk.Timeout> GetCleanupChunk(DateTime startSlice)
         {
             using (var session = documentStore.OpenSession())
             {
@@ -94,7 +95,7 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
                     })
                     .Take(1024)
                     .ToList()
-                    .Select(arg => new Tuple<string, DateTime>(arg.Id, arg.Time));
+                    .Select(arg => new TimeoutsChunk.Timeout(arg.Id, arg.Time));
 
                 lastCleanupTime = DateTime.UtcNow;
 

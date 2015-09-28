@@ -1,6 +1,7 @@
 ﻿namespace NServiceBus.RavenDB.SessionManagement
 {
     using System;
+    using System.Threading.Tasks;
     using NServiceBus.Pipeline;
     using NServiceBus.RavenDB.Internal;
     using NServiceBus.RavenDB.Persistence;
@@ -19,12 +20,12 @@
             this.documentStoreWrapper = documentStoreWrapper;
         }
 
-        public override void Invoke(Context context, Action next)
+        public override async Task Invoke(Context context, Func<Task> next)
         {
             using (var session = OpenSession(context))
             {
                 context.Set(session);
-                next();
+                await next().ConfigureAwait(false);
                 session.SaveChanges();
             }
         }

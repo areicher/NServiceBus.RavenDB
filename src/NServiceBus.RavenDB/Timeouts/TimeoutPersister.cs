@@ -1,6 +1,7 @@
 namespace NServiceBus.TimeoutPersisters.RavenDB
 {
     using System;
+    using System.Threading.Tasks;
     using NServiceBus.Timeout.Core;
     using Raven.Abstractions.Data;
     using Raven.Client;
@@ -16,16 +17,17 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
             documentStore = store;
         }
 
-        public void Add(CoreTimeoutData timeout, TimeoutPersistenceOptions options)
+        public Task Add(CoreTimeoutData timeout, TimeoutPersistenceOptions options)
         {
             using (var session = documentStore.OpenSession())
             {
                 session.Store(new Timeout(timeout));
                 session.SaveChanges();
             }
+            return Task.FromResult(0);
         }
 
-        public bool TryRemove(string timeoutId, TimeoutPersistenceOptions options, out CoreTimeoutData timeoutData)
+        public Task<CoreTimeoutData> Remove(string timeoutId, TimeoutPersistenceOptions options)
         {
             using (var session = documentStore.OpenSession())
             {
@@ -34,21 +36,21 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
                 var timeout = session.Load<Timeout>(timeoutId);
                 if (timeout == null)
                 {
-                    timeoutData = null;
-                    return false;
+                    return Task.FromResult(default(CoreTimeoutData));
                 }
 
-                timeoutData = timeout.ToCoreTimeoutData();
+                var timeoutData = timeout.ToCoreTimeoutData();
                 session.Delete(timeout);
                 session.SaveChanges();
-                return true;
+                return Task.FromResult(timeoutData);
             }
         }
 
-        public void RemoveTimeoutBy(Guid sagaId, TimeoutPersistenceOptions options)
+        public Task RemoveTimeoutBy(Guid sagaId, TimeoutPersistenceOptions options)
         {
             var operation = documentStore.DatabaseCommands.DeleteByIndex("TimeoutsIndex", new IndexQuery { Query = string.Format("SagaId:{0}", sagaId) }, new BulkOperationOptions { AllowStale = true });
             operation.WaitForCompletion();
+            return Task.FromResult(0);
         }
     }
 }

@@ -17,10 +17,11 @@ class Program
         {
             bus.Start();
 
-            bus.SendLocal(new MyMessage
+            bus.SendLocalAsync(new MyMessage
             {
                 SomeId = Guid.NewGuid()
-            });
+            })
+            .Wait();
         }
 
         Console.ReadLine();

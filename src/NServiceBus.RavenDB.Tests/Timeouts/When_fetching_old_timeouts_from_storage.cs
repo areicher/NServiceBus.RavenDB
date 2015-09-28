@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using NServiceBus.Support;
     using NServiceBus.TimeoutPersisters.RavenDB;
     using NUnit.Framework;
@@ -27,7 +28,7 @@
         }
 
         [Test]
-        public void Should_return_the_complete_list_of_timeouts()
+        public async Task Should_return_the_complete_list_of_timeouts()
         {
             const int numberOfTimeoutsToAdd = 10;
 
@@ -48,12 +49,11 @@
 
             WaitForIndexing(store);
 
-            DateTime nextTimeToRunQuery;
-            Assert.AreEqual(numberOfTimeoutsToAdd, query.GetNextChunk(DateTime.UtcNow.AddYears(-3), out nextTimeToRunQuery).Count());
+            Assert.AreEqual(numberOfTimeoutsToAdd, (await query.GetNextChunk(DateTime.UtcNow.AddYears(-3))).DueTimeouts.Count());
         }
 
         [Test]
-        public void Should_return_the_complete_list_of_timeouts_even_when_mixed_old_and_new()
+        public async Task Should_return_the_complete_list_of_timeouts_even_when_mixed_old_and_new()
         {
             const int numberOfTimeoutsToAdd = 10;
 
@@ -99,12 +99,11 @@
 
             WaitForIndexing(store);
 
-            DateTime nextTimeToRunQuery;
-            Assert.AreEqual(numberOfTimeoutsToAdd, query.GetNextChunk(DateTime.UtcNow.AddYears(-3), out nextTimeToRunQuery).Count());
+            Assert.AreEqual(numberOfTimeoutsToAdd, (await query.GetNextChunk(DateTime.UtcNow.AddYears(-3))).DueTimeouts.Count());
         }
 
         [Test]
-        public void Should_return_the_next_time_of_retrieval()
+        public async Task Should_return_the_next_time_of_retrieval()
         {
             query.CleanupGapFromTimeslice = TimeSpan.FromSeconds(1);
             query.TriggerCleanupEvery = TimeSpan.MinValue;
@@ -125,8 +124,7 @@
 
             WaitForIndexing(store);
 
-            DateTime nextTimeToRunQuery;
-            query.GetNextChunk(DateTime.UtcNow.AddYears(-3), out nextTimeToRunQuery);
+            var nextTimeToRunQuery = (await query.GetNextChunk(DateTime.UtcNow.AddYears(-3))).NextTimeToQuery;
 
             Assert.IsTrue((nextTime - nextTimeToRunQuery).TotalSeconds < 1);
         }

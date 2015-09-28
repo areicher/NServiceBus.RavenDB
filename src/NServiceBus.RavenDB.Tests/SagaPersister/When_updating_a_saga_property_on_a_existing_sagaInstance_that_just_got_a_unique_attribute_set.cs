@@ -1,6 +1,7 @@
 using System;
+using System.Threading.Tasks;
+using NServiceBus;
 using NServiceBus.RavenDB.Tests;
-using NServiceBus.Saga;
 using NServiceBus.SagaPersisters.RavenDB;
 using NUnit.Framework;
 using Raven.Client;
@@ -9,7 +10,7 @@ using Raven.Client;
 public class When_updating_a_saga_property_on_a_existing_sagaInstance_that_just_got_a_unique_attribute_set : RavenDBPersistenceTestBase
 {
     [Test]
-    public void It_should_set_the_attribute_and_allow_the_update()
+    public async Task It_should_set_the_attribute_and_allow_the_update()
     {
         IDocumentSession session;
         var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
@@ -25,7 +26,7 @@ public class When_updating_a_saga_property_on_a_existing_sagaInstance_that_just_
                 NonUniqueString = "notUnique"
             };
 
-        persister.Save(saga1, options);
+        await persister.Save(saga1, options);
         session.SaveChanges();
         session.Dispose();
 
@@ -37,9 +38,9 @@ public class When_updating_a_saga_property_on_a_existing_sagaInstance_that_just_
         }
 
         options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
-        var saga = persister.Get<SagaData>(saga1.Id, options);
+        var saga = await persister.Get<SagaData>(saga1.Id, options);
         saga.UniqueString = anotherUniqueString;
-        persister.Update(saga, options);
+        await persister.Update(saga, options);
         session.SaveChanges();
         session.Dispose();
 

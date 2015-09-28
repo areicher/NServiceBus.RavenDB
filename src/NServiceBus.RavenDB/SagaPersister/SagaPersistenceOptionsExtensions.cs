@@ -1,6 +1,6 @@
 namespace NServiceBus.SagaPersisters.RavenDB
 {
-    using NServiceBus.Saga;
+    using NServiceBus.Sagas;
     using Raven.Client;
 
     static class SagaPersistenceOptionsExtensions

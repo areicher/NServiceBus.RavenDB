@@ -46,7 +46,6 @@
             store.Listeners.RegisterListener(new SubscriptionV1toV2Converter());
 
             context.Container.ConfigureComponent(() => new SubscriptionPersister(store), DependencyLifecycle.InstancePerCall);
-            context.Container.ConfigureComponent(() => new QuerySubscriptions(store), DependencyLifecycle.InstancePerCall);
         }
     }
 }

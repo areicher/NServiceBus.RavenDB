@@ -1,6 +1,7 @@
 using System;
+using System.Threading.Tasks;
+using NServiceBus;
 using NServiceBus.RavenDB.Tests;
-using NServiceBus.Saga;
 using NServiceBus.SagaPersisters.RavenDB;
 using NUnit.Framework;
 using Raven.Client;
@@ -9,7 +10,7 @@ using Raven.Client;
 public class When_updating_a_saga_property_that_has_a_unique_attribute : RavenDBPersistenceTestBase
 {
     [Test]
-    public void It_should_allow_the_update()
+    public async Task It_should_allow_the_update()
     {
         IDocumentSession session;
         var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
@@ -21,14 +22,14 @@ public class When_updating_a_saga_property_that_has_a_unique_attribute : RavenDB
                 UniqueString = uniqueString
             };
 
-        persister.Save(saga1, options);
+        await persister.Save(saga1, options);
         session.SaveChanges();
         session.Dispose();
 
         options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
-        var saga = persister.Get<SagaData>(saga1.Id, options);
+        var saga = await persister.Get<SagaData>(saga1.Id, options);
         saga.UniqueString = Guid.NewGuid().ToString();
-        persister.Update(saga, options);
+        await persister.Update(saga, options);
         session.SaveChanges();
         session.Dispose();
 
@@ -40,7 +41,7 @@ public class When_updating_a_saga_property_that_has_a_unique_attribute : RavenDB
 
         //this should not blow since we changed the unique value in the previous saga
         options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
-        persister.Save(saga2, options);
+        await persister.Save(saga2, options);
         session.SaveChanges();
     }
 

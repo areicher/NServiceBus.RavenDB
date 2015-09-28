@@ -2,6 +2,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading.Tasks;
     using NServiceBus.Extensibility;
     using NServiceBus.RavenDB.Timeouts;
     using NServiceBus.Support;
@@ -25,7 +26,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
         }
 
         [Test]
-        public void Should_allow_old_timeouts()
+        public async Task Should_allow_old_timeouts()
         {
             var headers = new Dictionary<string, string>
             {
@@ -50,12 +51,13 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
             session.SaveChanges();
 
             Timeout.Core.TimeoutData removedTimeout = null;
-            Assert.DoesNotThrow(() => { persister.TryRemove(timeout.Id, options, out removedTimeout); });
+            var exception = await Catch(async () => { removedTimeout = await persister.Remove(timeout.Id, options); });
+            Assert.Null(exception);
             Assert.AreEqual("timeouts" + "@" + RuntimeEnvironment.MachineName, removedTimeout.Destination);
         }
 
         [Test]
-        public void Should_allow_old_timeouts_without_machine_name()
+        public async Task Should_allow_old_timeouts_without_machine_name()
         {
             var headers = new Dictionary<string, string>
             {
@@ -80,13 +82,14 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
             session.SaveChanges();
 
             Timeout.Core.TimeoutData removedTimeout = null;
-            Assert.DoesNotThrow(() => { persister.TryRemove(timeout.Id, options, out removedTimeout); });
+            var exception = await Catch(async () => { removedTimeout = await persister.Remove(timeout.Id, options); });
+            Assert.Null(exception);
             Assert.AreEqual("timeouts", removedTimeout.Destination);
         }
 
         [Test]
         // This test makes sure that the conversion listener doesn't destroy new documents
-        public void Should_allow_new_timeouts()
+        public async Task Should_allow_new_timeouts()
         {
             var headers = new Dictionary<string, string>
             {
@@ -106,7 +109,8 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
             };
             var options = new TimeoutPersistenceOptions(new ContextBag());
 
-            Assert.DoesNotThrow(() => { persister.Add(timeout, options); });
+            var exception = await Catch(async () => { await persister.Add(timeout, options); });
+            Assert.Null(exception);
         }
     }
 }

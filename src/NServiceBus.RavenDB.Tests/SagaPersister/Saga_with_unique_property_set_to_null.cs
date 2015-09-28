@@ -1,6 +1,6 @@
 ﻿using System;
+using NServiceBus;
 using NServiceBus.RavenDB.Tests;
-using NServiceBus.Saga;
 using NServiceBus.SagaPersisters.RavenDB;
 using NUnit.Framework;
 using Raven.Client;

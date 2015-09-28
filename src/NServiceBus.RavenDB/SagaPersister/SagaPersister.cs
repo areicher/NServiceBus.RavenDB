@@ -5,8 +5,9 @@ namespace NServiceBus.SagaPersisters.RavenDB
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Threading.Tasks;
     using NServiceBus.RavenDB.Persistence.SagaPersister;
-    using NServiceBus.Saga;
+    using NServiceBus.Sagas;
     using Raven.Abstractions.Commands;
     using Raven.Client;
 
@@ -17,14 +18,15 @@ namespace NServiceBus.SagaPersisters.RavenDB
 
         public bool AllowUnsafeLoads { get; set; }
 
-        public void Save(IContainSagaData saga, SagaPersistenceOptions options)
+        public Task Save(IContainSagaData saga, SagaPersistenceOptions options)
         {
             var session = options.GetSession();
             session.Store(saga);
             StoreUniqueProperty(saga, session, options.Metadata);
+            return Task.FromResult(0);
         }
 
-        public void Update(IContainSagaData saga, SagaPersistenceOptions options)
+        public Task Update(IContainSagaData saga, SagaPersistenceOptions options)
         {
             // TODO: Check assumption
             var sagaMetadata = options.Metadata;
@@ -32,7 +34,7 @@ namespace NServiceBus.SagaPersisters.RavenDB
 
             if (correlationProperty == null)
             {
-                return;
+                return Task.FromResult(0);
             }
 
             var session = options.GetSession();
@@ -44,7 +46,7 @@ namespace NServiceBus.SagaPersisters.RavenDB
             if (!ravenMetadata.ContainsKey(UniqueValueMetadataKey))
             {
                 StoreUniqueProperty(saga, session, sagaMetadata);
-                return;
+                return Task.FromResult(0);
             }
 
             var storedValue = ravenMetadata[UniqueValueMetadataKey].ToString();
@@ -53,20 +55,22 @@ namespace NServiceBus.SagaPersisters.RavenDB
 
             if (currentValue == storedValue)
             {
-                return;
+                return Task.FromResult(0);
             }
 
             DeleteUniqueProperty(saga, session, new KeyValuePair<string, object>(uniqueProperty.Name, storedValue));
             StoreUniqueProperty(saga, session, sagaMetadata);
+
+            return Task.FromResult(0);
         }
 
-        public T Get<T>(Guid sagaId, SagaPersistenceOptions options) where T : IContainSagaData
+        public Task<T> Get<T>(Guid sagaId, SagaPersistenceOptions options) where T : IContainSagaData
         {
             var session = options.GetSession();
-            return session.Load<T>(sagaId);
+            return Task.FromResult(session.Load<T>(sagaId));
         }
 
-        public T Get<T>(string property, object value, SagaPersistenceOptions options) where T : IContainSagaData
+        public Task<T> Get<T>(string property, object value, SagaPersistenceOptions options) where T : IContainSagaData
         {
             var session = options.GetSession();
             if (IsUniqueProperty<T>(options.Metadata, property))
@@ -76,18 +80,16 @@ namespace NServiceBus.SagaPersisters.RavenDB
 
             if (!AllowUnsafeLoads)
             {
-                var message = string.Format("Correlating on saga properties not marked as unique is not safe due to the high risk for stale results. Please add a [Unique] attribute to the '{0}' property on your '{1}' saga data class. If you still want to allow this please add .UsePersistence<RavenDBPersistence>().AllowStaleSagaReads() to your config",
-                    property,
-                    typeof(T).Name);
+                var message = $"Correlating on saga properties not marked as unique is not safe due to the high risk for stale results. Please add a [Unique] attribute to the '{property}' property on your '{typeof(T).Name}' saga data class. If you still want to allow this please add .UsePersistence<RavenDBPersistence>().AllowStaleSagaReads() to your config";
                 throw new Exception(message);
             }
 
-            return session.Advanced.DocumentQuery<T>()
+            return Task.FromResult(session.Advanced.DocumentQuery<T>()
                 .WhereEquals(property, value)
-                .FirstOrDefault();
+                .FirstOrDefault());
         }
 
-        public void Complete(IContainSagaData saga, SagaPersistenceOptions options)
+        public Task Complete(IContainSagaData saga, SagaPersistenceOptions options)
         {
             var session = options.GetSession();
             session.Delete(saga);
@@ -97,11 +99,12 @@ namespace NServiceBus.SagaPersisters.RavenDB
 
             if (correlationProperty == null)
             {
-                return;
+                return Task.FromResult(0);
             }
 
             var uniqueProperty = GetUniqueProperty(options.Metadata, correlationProperty);
             DeleteUniqueProperty(saga, session, new KeyValuePair<string, object>(uniqueProperty.Name, uniqueProperty.GetValue(saga)));
+            return Task.FromResult(0);
         }
 
         static bool IsUniqueProperty<T>(SagaMetadata metadata, string property)
@@ -124,7 +127,7 @@ namespace NServiceBus.SagaPersisters.RavenDB
             return metadata.SagaEntityType.GetProperties().Single(p => p.CanRead && p.Name == correlationProperty.Name);
         }
 
-        T GetByUniqueProperty<T>(string property, object value, IDocumentSession session, SagaPersistenceOptions options) where T : IContainSagaData
+        Task<T> GetByUniqueProperty<T>(string property, object value, IDocumentSession session, SagaPersistenceOptions options) where T : IContainSagaData
         {
             var lookupId = SagaUniqueIdentity.FormatId(typeof(T), new KeyValuePair<string, object>(property, value));
 
@@ -135,11 +138,11 @@ namespace NServiceBus.SagaPersisters.RavenDB
             if (lookup != null)
             {
                 return lookup.SagaDocId != null
-                    ? session.Load<T>(lookup.SagaDocId) //if we have a saga id we can just load it
+                    ? Task.FromResult(session.Load<T>(lookup.SagaDocId)) //if we have a saga id we can just load it
                     : Get<T>(lookup.SagaId, options); //if not this is a saga that was created pre 3.0.4 so we fallback to a get instead
             }
 
-            return default(T);
+            return Task.FromResult(default(T));
         }
 
         static void StoreUniqueProperty(IContainSagaData saga, IDocumentSession session, SagaMetadata sagaMetadata)

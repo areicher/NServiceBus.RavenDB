@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Threading.Tasks;
+using NServiceBus;
 using NServiceBus.RavenDB.Tests;
-using NServiceBus.Saga;
 using NServiceBus.SagaPersisters.RavenDB;
 using NUnit.Framework;
 using Raven.Client;
@@ -9,7 +10,7 @@ using Raven.Client;
 public class When_persisting_a_saga_with_the_same_unique_property_as_a_completed_saga : RavenDBPersistenceTestBase
 {
     [Test]
-    public void It_should_persist_successfully()
+    public async Task It_should_persist_successfully()
     {
         IDocumentSession session;
         var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
@@ -20,13 +21,13 @@ public class When_persisting_a_saga_with_the_same_unique_property_as_a_completed
                 Id = Guid.NewGuid(),
                 UniqueString = uniqueString
             };
-        persister.Save(saga1, options);
+        await persister.Save(saga1, options);
         session.SaveChanges();
         session.Dispose();
 
         options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
-        var saga = persister.Get<SagaData>(saga1.Id, options);
-        persister.Complete(saga, options);
+        var saga = await persister.Get<SagaData>(saga1.Id, options);
+        await persister.Complete(saga, options);
         session.SaveChanges();
         session.Dispose();
 
@@ -37,7 +38,7 @@ public class When_persisting_a_saga_with_the_same_unique_property_as_a_completed
                 UniqueString = uniqueString
             };
 
-        persister.Save(saga2, options);
+        await persister.Save(saga2, options);
         session.SaveChanges();
     }
 

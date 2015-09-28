@@ -6,6 +6,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
 {
     using System.Diagnostics;
     using System.Threading;
+    using System.Threading.Tasks;
     using NServiceBus.Extensibility;
     using NServiceBus.Timeout.Core;
     using NUnit.Framework;
@@ -20,7 +21,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
     {
         [TestCase]
         [Explicit]
-        public void Never_ever()
+        public async Task Never_ever()
         {
             var db = Guid.NewGuid().ToString();
             using (var documentStore = new DocumentStore
@@ -69,19 +70,17 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
 
                 // Mimic the behavior of the TimeoutPersister coordinator
                 var found = 0;
-                TimeoutData tmptd;
                 while (!finishedAdding || startSlice < lastTimeout)
                 {
-                    DateTime nextRetrieval;
-                    var timeoutDatas = query.GetNextChunk(startSlice, out nextRetrieval);
-                    foreach (var timeoutData in timeoutDatas)
+                    var timeoutData = await query.GetNextChunk(startSlice);
+                    foreach (var timeout in timeoutData.DueTimeouts)
                     {
-                        if (startSlice < timeoutData.Item2)
+                        if (startSlice < timeout.DueTime)
                         {
-                            startSlice = timeoutData.Item2;
+                            startSlice = timeout.DueTime;
                         }
 
-                        Assert.IsTrue(persister.TryRemove(timeoutData.Item1, options, out tmptd));
+                        Assert.NotNull(await persister.Remove(timeout.Id, options));
                         found++;
                     }
                 }
@@ -98,7 +97,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                     found += chunkToCleanup.Length;
                     foreach (var tuple in chunkToCleanup)
                     {
-                        Assert.IsTrue(persister.TryRemove(tuple.Item1, options, out tmptd));
+                        Assert.NotNull(await persister.Remove(tuple.Id, options));
                     }
 
                     WaitForIndexing(documentStore);
@@ -116,7 +115,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
 
         [TestCase]
         [Explicit]
-        public void Should_not_skip_timeouts_also_with_multiple_clients_adding_timeouts()
+        public async Task Should_not_skip_timeouts_also_with_multiple_clients_adding_timeouts()
         {
             var db = Guid.NewGuid().ToString();
             using (var documentStore = new DocumentStore
@@ -196,19 +195,17 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
 
                 // Mimic the behavior of the TimeoutPersister coordinator
                 var found = 0;
-                TimeoutData tmptd;
                 while (!finishedAdding1 || !finishedAdding2 || startSlice < lastExpectedTimeout)
                 {
-                    DateTime nextRetrieval;
-                    var timeoutDatas = query.GetNextChunk(startSlice, out nextRetrieval);
-                    foreach (var timeoutData in timeoutDatas)
+                    var timeoutDatas = await query.GetNextChunk(startSlice);
+                    foreach (var timeoutData in timeoutDatas.DueTimeouts)
                     {
-                        if (startSlice < timeoutData.Item2)
+                        if (startSlice < timeoutData.DueTime)
                         {
-                            startSlice = timeoutData.Item2;
+                            startSlice = timeoutData.DueTime;
                         }
 
-                        Assert.IsTrue(persister.TryRemove(timeoutData.Item1, options, out tmptd));
+                        Assert.NotNull(await persister.Remove(timeoutData.Id, options));
                         found++;
                     }
                 }
@@ -226,7 +223,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                     found += chunkToCleanup.Length;
                     foreach (var tuple in chunkToCleanup)
                     {
-                        Assert.IsTrue(persister.TryRemove(tuple.Item1, options, out tmptd));
+                        Assert.NotNull(await persister.Remove(tuple.Id, options));
                     }
 
                     WaitForIndexing(documentStore);

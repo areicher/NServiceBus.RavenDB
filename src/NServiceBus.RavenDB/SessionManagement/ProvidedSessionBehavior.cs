@@ -1,6 +1,7 @@
 ﻿namespace NServiceBus.RavenDB.SessionManagement
 {
     using System;
+    using System.Threading.Tasks;
     using NServiceBus.Pipeline;
     using Raven.Client;
 
@@ -8,10 +9,10 @@
     {
         public Func<IDocumentSession> GetSession { get; set; }
 
-        public override void Invoke(Context context, Action next)
+        public override Task Invoke(Context context, Func<Task> next)
         {
             context.Set(GetSession);
-            next();
+            return next();
         }
 
         public class Registration : RegisterStep

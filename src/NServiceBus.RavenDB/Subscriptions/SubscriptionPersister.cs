@@ -2,6 +2,7 @@ namespace NServiceBus.Unicast.Subscriptions.RavenDB
 {
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using NServiceBus.RavenDB.Persistence.SubscriptionStorage;
     using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
     using Raven.Client;
@@ -15,7 +16,7 @@ namespace NServiceBus.Unicast.Subscriptions.RavenDB
             documentStore = store;
         }
 
-        public void Subscribe(string client, IEnumerable<MessageType> messageTypes, SubscriptionStorageOptions options)
+        public Task Subscribe(string client, IEnumerable<MessageType> messageTypes, SubscriptionStorageOptions options)
         {
             var messageTypeLookup = messageTypes.ToDictionary(Subscription.FormatId);
 
@@ -36,9 +37,11 @@ namespace NServiceBus.Unicast.Subscriptions.RavenDB
 
                 session.SaveChanges();
             }
+
+            return Task.FromResult(0);
         }
 
-        public void Unsubscribe(string client, IEnumerable<MessageType> messageTypes, SubscriptionStorageOptions options)
+        public Task Unsubscribe(string client, IEnumerable<MessageType> messageTypes, SubscriptionStorageOptions options)
         {
             using (var session = OpenSession())
             {
@@ -52,6 +55,17 @@ namespace NServiceBus.Unicast.Subscriptions.RavenDB
                 }
 
                 session.SaveChanges();
+            }
+            return Task.FromResult(0);
+        }
+
+        public Task<IEnumerable<string>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, SubscriptionStorageOptions options)
+        {
+            using (var session = OpenSession())
+            {
+                return Task.FromResult(GetSubscriptions(messageTypes, session)
+                    .SelectMany(s => s.Clients)
+                    .Distinct());
             }
         }
 

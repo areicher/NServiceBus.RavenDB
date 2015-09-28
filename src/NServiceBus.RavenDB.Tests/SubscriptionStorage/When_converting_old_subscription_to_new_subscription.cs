@@ -2,10 +2,13 @@
 {
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
+    using NServiceBus.Extensibility;
     using NServiceBus.RavenDB.Persistence.SubscriptionStorage;
     using NServiceBus.RavenDB.Timeouts;
     using NServiceBus.Support;
     using NServiceBus.Unicast.Subscriptions;
+    using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
     using NServiceBus.Unicast.Subscriptions.RavenDB;
     using NUnit.Framework;
     using Raven.Client.Listeners;
@@ -15,7 +18,7 @@
     [TestFixture]
     public class When_converting_old_subscription_to_new_subscription : RavenDBPersistenceTestBase
     {
-        QuerySubscriptions query;
+        SubscriptionPersister persister;
 
         public override void SetUp()
         {
@@ -24,11 +27,11 @@
             store.Listeners.RegisterListener(new FakeSubscriptionClrType());
             store.Listeners.RegisterListener(new SubscriptionV1toV2Converter());
 
-            query = new QuerySubscriptions(store);
+            persister = new SubscriptionPersister(store);
         }
 
         [Test]
-        public void Should_allow_old_subscriptions()
+        public async Task Should_allow_old_subscriptions()
         {
             var session = store.OpenSession();
             var messageType = MessageTypes.MessageA.Single();
@@ -44,16 +47,18 @@
             session.SaveChanges();
 
             List<string> subscriptions = null;
-            Assert.DoesNotThrow(() =>
+
+            var exception = await Catch(async () =>
             {
-                subscriptions = query.GetSubscriberAddressesForMessage(MessageTypes.MessageA).ToList();
+                subscriptions = (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new SubscriptionStorageOptions(new ContextBag()))).ToList();
             });
+            Assert.Null(exception);
             Assert.AreEqual("timeouts" + "@" + RuntimeEnvironment.MachineName, subscriptions.ElementAt(0));
             Assert.AreEqual("mytestendpoint" + "@" + RuntimeEnvironment.MachineName, subscriptions.ElementAt(1));
         }
 
         [Test]
-        public void Should_allow_old_subscriptions_without_machine_name()
+        public async Task Should_allow_old_subscriptions_without_machine_name()
         {
             var session = store.OpenSession();
             var messageType = MessageTypes.MessageA.Single();
@@ -69,16 +74,17 @@
             session.SaveChanges();
 
             List<string> subscriptions = null;
-            Assert.DoesNotThrow(() =>
+            var exception = await Catch(async () =>
             {
-                subscriptions = query.GetSubscriberAddressesForMessage(MessageTypes.MessageA).ToList();
+                subscriptions = (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new SubscriptionStorageOptions(new ContextBag()))).ToList();
             });
+            Assert.Null(exception);
             Assert.AreEqual("timeouts", subscriptions.ElementAt(0));
             Assert.AreEqual("mytestendpoint", subscriptions.ElementAt(1));
         }
 
         [Test]
-        public void Should_allow_old_subscriptions_with_empty_clients()
+        public async Task Should_allow_old_subscriptions_with_empty_clients()
         {
             var session = store.OpenSession();
             var messageType = MessageTypes.MessageA.Single();
@@ -90,15 +96,16 @@
             session.SaveChanges();
 
             List<string> subscriptions = null;
-            Assert.DoesNotThrow(() =>
+            var exception = await Catch(async () =>
             {
-                subscriptions = query.GetSubscriberAddressesForMessage(MessageTypes.MessageA).ToList();
+                subscriptions = (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new SubscriptionStorageOptions(new ContextBag()))).ToList();
             });
+            Assert.Null(exception);
             Assert.IsEmpty(subscriptions);
         }
 
         [Test]
-        public void Should_allow_new_subscriptions()
+        public async Task Should_allow_new_subscriptions()
         {
             var session = store.OpenSession();
             var messageType = MessageTypes.MessageA.Single();
@@ -113,10 +120,11 @@
             }, Subscription.FormatId(messageType));
             session.SaveChanges();
 
-            Assert.DoesNotThrow(() =>
+            var exception = await Catch(async() =>
             {
-                query.GetSubscriberAddressesForMessage(MessageTypes.MessageA).ToList();
+                (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new SubscriptionStorageOptions(new ContextBag()))).ToList();
             });
+            Assert.Null(exception);
         }
 
         class FakeSubscriptionClrType : IDocumentConversionListener
