@@ -34,7 +34,7 @@
         {
             public SagaFinderEndpoint()
             {
-                EndpointSetup<DefaultServer>();
+                EndpointSetup<DefaultServer>(c => c.LimitMessageProcessingConcurrencyTo(1));
             }
 
 
@@ -45,7 +45,7 @@
                 {
                     if (Context.SagaId == Guid.Empty)
                     {
-                        return null;
+                        return Task.FromResult(default(SagaFinderSagaData));
                     }
 
                     var session = options.Context.Get<IDocumentSession>();

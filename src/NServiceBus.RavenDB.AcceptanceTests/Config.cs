@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Persistence;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 
 public class ConfigureRavenDBPersistence
