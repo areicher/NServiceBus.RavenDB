@@ -48,7 +48,8 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
 
         public Task RemoveTimeoutBy(Guid sagaId, TimeoutPersistenceOptions options)
         {
-            var operation = documentStore.DatabaseCommands.DeleteByIndex("TimeoutsIndex", new IndexQuery { Query = string.Format("SagaId:{0}", sagaId) }, new BulkOperationOptions { AllowStale = true });
+            var operation = documentStore.DatabaseCommands.DeleteByIndex("TimeoutsIndex", new IndexQuery { Query = $"SagaId:{sagaId}"
+            }, new BulkOperationOptions { AllowStale = true });
             operation.WaitForCompletion();
             return Task.FromResult(0);
         }

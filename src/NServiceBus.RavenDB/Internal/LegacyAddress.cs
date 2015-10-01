@@ -30,7 +30,7 @@ namespace NServiceBus.RavenDB.Internal
             var machine = token.Value<string>("Machine");
 
             // Previously known as IgnoreMachineName (for brokers)
-            if (String.IsNullOrEmpty(machine))
+            if (string.IsNullOrEmpty(machine))
             {
                 return queue;
             }

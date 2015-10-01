@@ -12,7 +12,7 @@
     {
         readonly IDocumentStoreWrapper documentStoreWrapper;
 
-        public static Func<IMessageContext, string> GetDatabaseName = context => String.Empty;
+        public static Func<IMessageContext, string> GetDatabaseName = context => string.Empty;
 
 
         public OpenSessionBehavior(IDocumentStoreWrapper documentStoreWrapper)
@@ -61,6 +61,6 @@
             this.context = context;
         }
 
-        public IDocumentSession Session { get { return context.Get<IDocumentSession>(); } }
+        public IDocumentSession Session => context.Get<IDocumentSession>();
     }
 }

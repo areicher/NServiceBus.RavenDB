@@ -109,7 +109,7 @@
         {
             var session = store.OpenSession();
             var messageType = MessageTypes.MessageA.Single();
-            session.Store(new Subscription()
+            session.Store(new Subscription
             {
                 Clients = new List<string>
                 {

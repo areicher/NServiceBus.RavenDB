@@ -27,7 +27,7 @@ namespace NServiceBus.RavenDB.Persistence.SubscriptionStorage
                 // generate a guid from the hash:
                 var id = new Guid(hashBytes);
 
-                return string.Format("Subscriptions/{0}", id);
+                return $"Subscriptions/{id}";
             }
         }
     }

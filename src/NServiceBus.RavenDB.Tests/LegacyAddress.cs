@@ -20,12 +20,12 @@ namespace NServiceBus.RavenDB.Tests
             Queue = info.GetString("Queue");
             Machine = info.GetString("Machine");
 
-            if (!String.IsNullOrEmpty(Queue))
+            if (!string.IsNullOrEmpty(Queue))
             {
                 queueLowerCased = Queue.ToLower();
             }
 
-            if (!String.IsNullOrEmpty(Machine))
+            if (!string.IsNullOrEmpty(Machine))
             {
                 machineLowerCased = Machine.ToLower();
             }
@@ -46,11 +46,11 @@ namespace NServiceBus.RavenDB.Tests
         {
             unchecked
             {
-                var hashCode = ((queueLowerCased != null ? queueLowerCased.GetHashCode() : 0) * 397);
+                var hashCode = ((queueLowerCased?.GetHashCode() ?? 0) * 397);
 
                 if (!ignoreMachineName)
                 {
-                    hashCode ^= (machineLowerCased != null ? machineLowerCased.GetHashCode() : 0);
+                    hashCode ^= machineLowerCased?.GetHashCode() ?? 0;
                 }
                 return hashCode;
             }
@@ -64,9 +64,9 @@ namespace NServiceBus.RavenDB.Tests
             return Queue + "@" + Machine;
         }
 
-        public string Queue { get; private set; }
+        public string Queue { get; }
 
-        public string Machine { get; private set; }
+        public string Machine { get; }
 
         /// <summary>
         /// Overloading for the == for the class LegacyAddress

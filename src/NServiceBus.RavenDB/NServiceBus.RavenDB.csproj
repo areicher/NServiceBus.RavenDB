@@ -69,6 +69,7 @@
     <Compile Include="Gateway\GatewayMessage.cs" />
     <Compile Include="Gateway\RavenDbTimeoutSettingsExtensions.cs" />
     <Compile Include="Gateway\RavenDbGatewayDeduplication.cs" />
+    <Compile Include="Internal\IDocumentStoreWrapper.cs" />
     <Compile Include="Internal\LegacyAddress.cs" />
     <Compile Include="Internal\BackwardsCompatibilityHelper.cs" />
     <Compile Include="Internal\RavenBuildInfo.cs" />
