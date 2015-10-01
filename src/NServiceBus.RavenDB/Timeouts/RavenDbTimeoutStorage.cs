@@ -50,7 +50,7 @@
 
             context.Container.ConfigureComponent(() => new TimeoutPersister(store),DependencyLifecycle.InstancePerCall);
             context.Container.ConfigureComponent(() => new QueryTimeouts(store), DependencyLifecycle.SingleInstance) // Needs to be SingleInstance because it contains cleanup state
-                .ConfigureProperty(x => x.EndpointName, context.Settings.EndpointName());
+                .ConfigureProperty(x => x.EndpointName, context.Settings.EndpointName().ToString());
         }
     }
 }
