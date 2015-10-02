@@ -31,10 +31,9 @@
             var options = this.NewOptions(out sesssion);
 
             var persister = new OutboxPersister { DocumentStore = store };
-            await persister.Store(new OutboxMessage("NotDispatched"), options);
+            await persister.Store(new OutboxMessage("NotDispatched", new List<TransportOperation>()), options);
 
-            var outboxMessage = new OutboxMessage(id);
-            outboxMessage.TransportOperations.Add(new TransportOperation(id, new Dictionary<string, string>(), new byte[1024 * 5], new Dictionary<string, string>()));
+            var outboxMessage = new OutboxMessage(id, new List<TransportOperation> { new TransportOperation(id, new Dictionary<string, string>(), new byte[1024 * 5], new Dictionary<string, string>()) });
             await persister.Store(outboxMessage, options);
 
             sesssion.SaveChanges();

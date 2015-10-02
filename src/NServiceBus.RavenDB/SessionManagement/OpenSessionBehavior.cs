@@ -8,7 +8,7 @@
     using NServiceBus.Unicast;
     using Raven.Client;
 
-    class OpenSessionBehavior : PhysicalMessageProcessingStageBehavior
+    class OpenSessionBehavior : Behavior<PhysicalMessageProcessingContext>
     {
         readonly IDocumentStoreWrapper documentStoreWrapper;
 
@@ -20,7 +20,7 @@
             this.documentStoreWrapper = documentStoreWrapper;
         }
 
-        public override async Task Invoke(Context context, Func<Task> next)
+        public override async Task Invoke(PhysicalMessageProcessingContext context, Func<Task> next)
         {
             using (var session = OpenSession(context))
             {
@@ -30,9 +30,9 @@
             }
         }
 
-        IDocumentSession OpenSession(Context context)
+        IDocumentSession OpenSession(PhysicalMessageProcessingContext context)
         {
-            var databaseName = GetDatabaseName(new MessageContext(context.GetPhysicalMessage()));
+            var databaseName = GetDatabaseName(new MessageContext(context.Message));
             var documentSession = string.IsNullOrEmpty(databaseName) ? documentStoreWrapper.DocumentStore.OpenSession() : documentStoreWrapper.DocumentStore.OpenSession(databaseName);
             documentSession.Advanced.AllowNonAuthoritativeInformation = false;
             documentSession.Advanced.UseOptimisticConcurrency = true;

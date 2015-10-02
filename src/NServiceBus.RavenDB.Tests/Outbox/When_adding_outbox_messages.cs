@@ -30,8 +30,8 @@ namespace NServiceBus.RavenDB.Tests.Outbox
 
             using (session)
             {
-                await persister.Store(new OutboxMessage("MySpecialId"), options);
-                var exception = Catch<NonUniqueObjectException>(async () => await persister.Store(new OutboxMessage("MySpecialId"), options));
+                await persister.Store(new OutboxMessage("MySpecialId", new List<TransportOperation>()), options);
+                var exception = Catch<NonUniqueObjectException>(async () => await persister.Store(new OutboxMessage("MySpecialId", new List<TransportOperation>()), options));
                 Assert.NotNull(exception);
                 session.SaveChanges();
             }
@@ -44,12 +44,12 @@ namespace NServiceBus.RavenDB.Tests.Outbox
             var options = this.NewOptions(out session);
             var persister = new OutboxPersister();
 
-            await persister.Store(new OutboxMessage("MySpecialId"), options);
+            await persister.Store(new OutboxMessage("MySpecialId", new List<TransportOperation>()), options);
             session.SaveChanges();
             session.Dispose();
 
             options = this.NewOptions(out session);
-            await persister.Store(new OutboxMessage("MySpecialId"), options);
+            await persister.Store(new OutboxMessage("MySpecialId", new List<TransportOperation>()), options);
             Assert.Throws<ConcurrencyException>(session.SaveChanges);
         }
 
@@ -62,8 +62,7 @@ namespace NServiceBus.RavenDB.Tests.Outbox
 
             var persister = new OutboxPersister { DocumentStore = store };
 
-            var message = new OutboxMessage(id);
-            message.TransportOperations.Add(new TransportOperation(id, new Dictionary<string, string>(), new byte[1024 * 5], new Dictionary<string, string>()));
+            var message = new OutboxMessage(id, new List<TransportOperation> { new TransportOperation(id, new Dictionary<string, string>(), new byte[1024 * 5], new Dictionary<string, string>()) });
             await persister.Store(message, options);
 
             session.SaveChanges();
@@ -85,8 +84,7 @@ namespace NServiceBus.RavenDB.Tests.Outbox
             IDocumentSession session;
             var options = this.NewOptions(out session);
             var persister = new OutboxPersister{ DocumentStore = store };
-            var message = new OutboxMessage(id);
-            message.TransportOperations.Add(new TransportOperation(id, new Dictionary<string, string>(), new byte[1024 * 5], new Dictionary<string, string>()));
+            var message = new OutboxMessage(id, new List<TransportOperation> { new TransportOperation(id, new Dictionary<string, string>(), new byte[1024 * 5], new Dictionary<string, string>()) });
             await persister.Store(message, options);
 
             session.SaveChanges();

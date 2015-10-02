@@ -14,7 +14,7 @@
         public async Task Should_blow_up()
         {
             var context = await Scenario.Define<Context>()
-                .WithEndpoint<SagaEndpoint>(b => b.Given(bus => bus.SendLocalAsync(new StartSagaMessage
+                .WithEndpoint<SagaEndpoint>(b => b.When(bus => bus.SendLocalAsync(new StartSagaMessage
                 {
                     SomeId = Guid.NewGuid()
                 })))
@@ -42,7 +42,7 @@
         public async Task Should_not_blow_up_if_there_is_no_mapping()
         {
             var context = await Scenario.Define<Context>()
-                .WithEndpoint<SagaEndpoint>(b=>b.Given(bus => bus.SendLocalAsync(new StartSagaMessageWithNoMapping())))
+                .WithEndpoint<SagaEndpoint>(b=>b.When(bus => bus.SendLocalAsync(new StartSagaMessageWithNoMapping())))
                 .Done(c => c.SagaStarted)
                 .Run();
 
@@ -53,7 +53,7 @@
         public async Task Should_not_blow_up_if_user_opts_in()
         {
             var context = await Scenario.Define<Context>()
-                .WithEndpoint<SagaEndpointWithOptIn>(b=>b.Given(bus => bus.SendLocalAsync(new StartSagaMessage
+                .WithEndpoint<SagaEndpointWithOptIn>(b=>b.When(bus => bus.SendLocalAsync(new StartSagaMessage
                 {
                     SomeId = Guid.NewGuid()
                 })))

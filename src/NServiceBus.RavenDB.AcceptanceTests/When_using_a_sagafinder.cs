@@ -14,7 +14,8 @@
         public async Task Should_be_able_to_access_session()
         {
             var context = await Scenario.Define<Context>()
-                .WithEndpoint<SagaFinderEndpoint>(b => b.Given(bus => bus.SendLocalAsync(new StartSagaMessage()))
+                .WithEndpoint<SagaFinderEndpoint>(b => b
+                .When(bus => bus.SendLocalAsync(new StartSagaMessage()))
                 .When(c => c.SagaId != Guid.Empty, bus => bus.SendLocalAsync(new StartSagaMessage())))
                 .Done(c =>c.SecondMessageProcessed)
                 .Run();

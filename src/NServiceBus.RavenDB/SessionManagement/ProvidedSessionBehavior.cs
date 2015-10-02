@@ -5,11 +5,11 @@
     using NServiceBus.Pipeline;
     using Raven.Client;
 
-    class ProvidedSessionBehavior : PhysicalMessageProcessingStageBehavior
+    class ProvidedSessionBehavior : Behavior<PhysicalMessageProcessingContext>
     {
         public Func<IDocumentSession> GetSession { get; set; }
 
-        public override Task Invoke(Context context, Func<Task> next)
+        public override Task Invoke(PhysicalMessageProcessingContext context, Func<Task> next)
         {
             context.Set(GetSession);
             return next();

@@ -24,11 +24,9 @@
                 return Task.FromResult(default(OutboxMessage));
             }
 
-            var message = new OutboxMessage(result.MessageId);
-            message.TransportOperations.AddRange(
-                result.TransportOperations.Select(t => new TransportOperation(t.MessageId, t.Options, t.Message, t.Headers))
-                );
-
+            var operations = result.TransportOperations.Select(t => new TransportOperation(t.MessageId, t.Options, t.Message, t.Headers)).ToList();
+            var message = new OutboxMessage(result.MessageId, operations);
+  
             return Task.FromResult(message);
         }
 
