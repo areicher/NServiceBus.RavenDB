@@ -2,13 +2,10 @@
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Persistence;
-using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 
 public class ConfigureRavenDBPersistence
 {
-    DocumentStore documentStore;
-
     public Task Configure(BusConfiguration config)
     {
         documentStore = new DocumentStore
@@ -29,8 +26,10 @@ public class ConfigureRavenDBPersistence
 
     public async Task Cleanup()
     {
-        await documentStore.AsyncDatabaseCommands.GlobalAdmin.DeleteDatabaseAsync(documentStore.DefaultDatabase, hardDelete: true);
+        await documentStore.AsyncDatabaseCommands.GlobalAdmin.DeleteDatabaseAsync(documentStore.DefaultDatabase, true);
 
         Console.WriteLine("Deleted '{0}' database", documentStore.DefaultDatabase);
     }
+
+    DocumentStore documentStore;
 }
