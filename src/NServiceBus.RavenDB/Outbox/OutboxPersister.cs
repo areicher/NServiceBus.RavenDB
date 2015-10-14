@@ -3,6 +3,7 @@
     using System;
     using System.Linq;
     using System.Threading.Tasks;
+    using NServiceBus.Extensibility;
     using NServiceBus.Outbox;
     using Raven.Client;
 
@@ -10,7 +11,7 @@
     {
         public IDocumentStore DocumentStore { get; set; }
 
-        public Task<OutboxMessage> Get(string messageId, OutboxStorageOptions options)
+        public Task<OutboxMessage> Get(string messageId, ReadOnlyContextBag options)
         {
             OutboxRecord result;
             using (var session = DocumentStore.OpenSession())
@@ -26,32 +27,43 @@
 
             var operations = result.TransportOperations.Select(t => new TransportOperation(t.MessageId, t.Options, t.Message, t.Headers)).ToList();
             var message = new OutboxMessage(result.MessageId, operations);
-  
+
             return Task.FromResult(message);
         }
 
-        public Task Store(OutboxMessage outboxMessage, OutboxStorageOptions options)
+
+        public Task<OutboxTransaction> BeginTransaction(ReadOnlyContextBag context)
         {
-            var session = options.GetSession();
+            var session = DocumentStore.OpenSession();
+
             session.Advanced.UseOptimisticConcurrency = true;
 
+            //todo: context.Set(session)
+            var transaction = new RavenDBOutboxTransaction(session);
+            return Task.FromResult<OutboxTransaction>(transaction);
+        }
+
+        public Task Store(OutboxMessage message, OutboxTransaction transaction, ReadOnlyContextBag context)
+        {
+            var session = ((RavenDBOutboxTransaction) transaction).Session;
+          
             session.Store(new OutboxRecord
             {
-                MessageId = outboxMessage.MessageId,
+                MessageId = message.MessageId,
                 Dispatched = false,
-                TransportOperations = outboxMessage.TransportOperations.Select(t => new OutboxRecord.OutboxOperation
+                TransportOperations = message.TransportOperations.Select(t => new OutboxRecord.OutboxOperation
                 {
                     Message = t.Body,
                     Headers = t.Headers,
                     MessageId = t.MessageId,
                     Options = t.Options
                 }).ToList()
-            }, GetOutboxRecordId(outboxMessage.MessageId));
+            }, GetOutboxRecordId(message.MessageId));
 
             return Task.FromResult(0);
         }
 
-        public Task SetAsDispatched(string messageId, OutboxStorageOptions options)
+        public Task SetAsDispatched(string messageId, ReadOnlyContextBag options)
         {
             using (var session = DocumentStore.OpenSession())
             {

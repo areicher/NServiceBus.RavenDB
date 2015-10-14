@@ -3,20 +3,19 @@ namespace NServiceBus.Unicast.Subscriptions.RavenDB
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
+    using NServiceBus.Extensibility;
     using NServiceBus.RavenDB.Persistence.SubscriptionStorage;
     using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
     using Raven.Client;
 
     class SubscriptionPersister : ISubscriptionStorage
     {
-        readonly IDocumentStore documentStore;
-
         public SubscriptionPersister(IDocumentStore store)
         {
             documentStore = store;
         }
 
-        public Task Subscribe(string client, IEnumerable<MessageType> messageTypes, SubscriptionStorageOptions options)
+        public Task Subscribe(string client, IEnumerable<MessageType> messageTypes, ContextBag context)
         {
             var messageTypeLookup = messageTypes.ToDictionary(Subscription.FormatId);
 
@@ -41,7 +40,7 @@ namespace NServiceBus.Unicast.Subscriptions.RavenDB
             return Task.FromResult(0);
         }
 
-        public Task Unsubscribe(string client, IEnumerable<MessageType> messageTypes, SubscriptionStorageOptions options)
+        public Task Unsubscribe(string client, IEnumerable<MessageType> messageTypes, ContextBag context)
         {
             using (var session = OpenSession())
             {
@@ -59,7 +58,7 @@ namespace NServiceBus.Unicast.Subscriptions.RavenDB
             return Task.FromResult(0);
         }
 
-        public Task<IEnumerable<string>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, SubscriptionStorageOptions options)
+        public Task<IEnumerable<string>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context)
         {
             using (var session = OpenSession())
             {
@@ -88,7 +87,7 @@ namespace NServiceBus.Unicast.Subscriptions.RavenDB
         {
             var subscription = new Subscription
             {
-                    Clients = new List<string>(),
+                Clients = new List<string>(),
                 Id = id,
                 MessageType = messageType
             };
@@ -96,5 +95,7 @@ namespace NServiceBus.Unicast.Subscriptions.RavenDB
 
             return subscription;
         }
+
+        readonly IDocumentStore documentStore;
     }
 }

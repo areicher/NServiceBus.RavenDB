@@ -6,6 +6,7 @@ namespace NServiceBus.SagaPersisters.RavenDB
     using System.Linq;
     using System.Reflection;
     using System.Threading.Tasks;
+    using NServiceBus.Extensibility;
     using NServiceBus.RavenDB.Persistence.SagaPersister;
     using NServiceBus.Sagas;
     using Raven.Abstractions.Commands;
@@ -18,117 +19,32 @@ namespace NServiceBus.SagaPersisters.RavenDB
 
         public bool AllowUnsafeLoads { get; set; }
 
-        public Task Save(IContainSagaData saga, SagaPersistenceOptions options)
+        public Task Save(IContainSagaData saga, SagaMetadata metadata, ContextBag context)
         {
-            var session = options.GetSession();
+            var session = context.Get<IDocumentSession>();
+
             session.Store(saga);
-            StoreUniqueProperty(saga, session, options.Metadata);
+
+            StoreUniqueProperty(saga, session, metadata);
             return Task.FromResult(0);
         }
 
-        public Task Update(IContainSagaData saga, SagaPersistenceOptions options)
+        public Task Update(IContainSagaData saga, ContextBag context)
         {
-            // TODO: Check assumption
-            var sagaMetadata = options.Metadata;
-            var correlationProperty = sagaMetadata.CorrelationProperties.SingleOrDefault();
-
-            if (correlationProperty == null)
-            {
-                return Task.FromResult(0);
-            }
-
-            var session = options.GetSession();
-            var uniqueProperty = GetUniqueProperty(sagaMetadata, correlationProperty);
-
-            var ravenMetadata = session.Advanced.GetMetadataFor(saga);
-
-            //if the user just added the unique property to a saga with existing data we need to set it
-            if (!ravenMetadata.ContainsKey(UniqueValueMetadataKey))
-            {
-                StoreUniqueProperty(saga, session, sagaMetadata);
-                return Task.FromResult(0);
-            }
-
-            var storedValue = ravenMetadata[UniqueValueMetadataKey].ToString();
-
-            var currentValue = uniqueProperty.GetValue(saga).ToString();
-
-            if (currentValue == storedValue)
-            {
-                return Task.FromResult(0);
-            }
-
-            DeleteUniqueProperty(saga, session, new KeyValuePair<string, object>(uniqueProperty.Name, storedValue));
-            StoreUniqueProperty(saga, session, sagaMetadata);
-
+            //np-op since the dirty tracking will handle the update for us
             return Task.FromResult(0);
         }
 
-        public Task<T> Get<T>(Guid sagaId, SagaPersistenceOptions options) where T : IContainSagaData
+        public Task<T> Get<T>(Guid sagaId, ContextBag context) where T : IContainSagaData
         {
-            var session = options.GetSession();
+            var session = context.Get<IDocumentSession>();
             return Task.FromResult(session.Load<T>(sagaId));
         }
 
-        public Task<T> Get<T>(string property, object value, SagaPersistenceOptions options) where T : IContainSagaData
+        public Task<T> Get<T>(string property, object value, ContextBag context) where T : IContainSagaData
         {
-            var session = options.GetSession();
-            if (IsUniqueProperty<T>(options.Metadata, property))
-            {
-                return GetByUniqueProperty<T>(property, value, session, options);
-            }
+            var session = context.Get<IDocumentSession>();
 
-            if (!AllowUnsafeLoads)
-            {
-                var message = $"Correlating on saga properties not marked as unique is not safe due to the high risk for stale results. Please add a [Unique] attribute to the '{property}' property on your '{typeof(T).Name}' saga data class. If you still want to allow this please add .UsePersistence<RavenDBPersistence>().AllowStaleSagaReads() to your config";
-                throw new Exception(message);
-            }
-
-            return Task.FromResult(session.Advanced.DocumentQuery<T>()
-                .WhereEquals(property, value)
-                .FirstOrDefault());
-        }
-
-        public Task Complete(IContainSagaData saga, SagaPersistenceOptions options)
-        {
-            var session = options.GetSession();
-            session.Delete(saga);
-
-            // TODO: Check assumption
-            var correlationProperty = options.Metadata.CorrelationProperties.SingleOrDefault();
-
-            if (correlationProperty == null)
-            {
-                return Task.FromResult(0);
-            }
-
-            var uniqueProperty = GetUniqueProperty(options.Metadata, correlationProperty);
-            DeleteUniqueProperty(saga, session, new KeyValuePair<string, object>(uniqueProperty.Name, uniqueProperty.GetValue(saga)));
-            return Task.FromResult(0);
-        }
-
-        static bool IsUniqueProperty<T>(SagaMetadata metadata, string property)
-        {
-            var key = typeof(T).FullName + property;
-            bool value;
-
-            if (!PropertyCache.TryGetValue(key, out value))
-            {
-                value = metadata.CorrelationProperties.Any(p => p.Name == property);
-                PropertyCache[key] = value;
-            }
-
-            return value;
-        }
-
-        static PropertyInfo GetUniqueProperty(SagaMetadata metadata, CorrelationProperty correlationProperty)
-        {
-            // TODO: Check assumption
-            return metadata.SagaEntityType.GetProperties().Single(p => p.CanRead && p.Name == correlationProperty.Name);
-        }
-
-        Task<T> GetByUniqueProperty<T>(string property, object value, IDocumentSession session, SagaPersistenceOptions options) where T : IContainSagaData
-        {
             var lookupId = SagaUniqueIdentity.FormatId(typeof(T), new KeyValuePair<string, object>(property, value));
 
             var lookup = session
@@ -139,21 +55,41 @@ namespace NServiceBus.SagaPersisters.RavenDB
             {
                 return lookup.SagaDocId != null
                     ? Task.FromResult(session.Load<T>(lookup.SagaDocId)) //if we have a saga id we can just load it
-                    : Get<T>(lookup.SagaId, options); //if not this is a saga that was created pre 3.0.4 so we fallback to a get instead
+                    : Get<T>(lookup.SagaId, context); //if not this is a saga that was created pre 3.0.4 so we fallback to a get instead
             }
 
             return Task.FromResult(default(T));
         }
 
-        static void StoreUniqueProperty(IContainSagaData saga, IDocumentSession session, SagaMetadata sagaMetadata)
+        public Task Complete(IContainSagaData saga, ContextBag context)
+        {
+            var session = context.Get<IDocumentSession>();
+            session.Delete(saga);
+
+            // TODO: Fix
+            //var correlationProperty = options.Metadata.CorrelationProperties.Sinfg();
+
+            //if (correlationProperty == null)
+            //{
+            //    return Task.FromResult(0);
+            //}
+
+            //var uniqueProperty = GetUniqueProperty(options.Metadata, correlationProperty);
+            //DeleteUniqueProperty(saga, session, new KeyValuePair<string, object>(uniqueProperty.Name, uniqueProperty.GetValue(saga)));
+            return Task.FromResult(0);
+        }
+
+     
+
+        static PropertyInfo GetUniqueProperty(SagaMetadata metadata, CorrelationProperty correlationProperty)
         {
             // TODO: Check assumption
-            var correlationProperty = sagaMetadata.CorrelationProperties.SingleOrDefault();
-
-            if (correlationProperty == null)
-            {
-                return;
-            }
+            return metadata.SagaEntityType.GetProperties().Single(p => p.CanRead && p.Name == correlationProperty.Name);
+        }
+        
+        static void StoreUniqueProperty(IContainSagaData saga, IDocumentSession session, SagaMetadata sagaMetadata)
+        {
+            var correlationProperty = sagaMetadata.CorrelationProperties.Single();
 
             var uniqueProperty = GetUniqueProperty(sagaMetadata, correlationProperty);
 

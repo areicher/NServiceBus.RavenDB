@@ -2,22 +2,21 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
 {
     using System;
     using System.Threading.Tasks;
+    using NServiceBus.Extensibility;
     using NServiceBus.Timeout.Core;
     using Raven.Abstractions.Data;
     using Raven.Client;
-    using CoreTimeoutData = Timeout.Core.TimeoutData;
+    using CoreTimeoutData = NServiceBus.Timeout.Core.TimeoutData;
     using Timeout = TimeoutData;
 
     class TimeoutPersister : IPersistTimeouts
     {
-        readonly IDocumentStore documentStore;
-
         public TimeoutPersister(IDocumentStore store)
         {
             documentStore = store;
         }
 
-        public Task Add(CoreTimeoutData timeout, TimeoutPersistenceOptions options)
+        public Task Add(CoreTimeoutData timeout, ContextBag context)
         {
             using (var session = documentStore.OpenSession())
             {
@@ -27,7 +26,7 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
             return Task.FromResult(0);
         }
 
-        public Task<CoreTimeoutData> Remove(string timeoutId, TimeoutPersistenceOptions options)
+        public Task<CoreTimeoutData> Remove(string timeoutId, ContextBag context)
         {
             using (var session = documentStore.OpenSession())
             {
@@ -46,12 +45,19 @@ namespace NServiceBus.TimeoutPersisters.RavenDB
             }
         }
 
-        public Task RemoveTimeoutBy(Guid sagaId, TimeoutPersistenceOptions options)
+        public Task RemoveTimeoutBy(Guid sagaId, ContextBag context)
         {
-            var operation = documentStore.DatabaseCommands.DeleteByIndex("TimeoutsIndex", new IndexQuery { Query = $"SagaId:{sagaId}"
-            }, new BulkOperationOptions { AllowStale = true });
+            var operation = documentStore.DatabaseCommands.DeleteByIndex("TimeoutsIndex", new IndexQuery
+            {
+                Query = $"SagaId:{sagaId}"
+            }, new BulkOperationOptions
+            {
+                AllowStale = true
+            });
             operation.WaitForCompletion();
             return Task.FromResult(0);
         }
+
+        readonly IDocumentStore documentStore;
     }
 }
