@@ -114,7 +114,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LegacyAddress.cs" />
-    <Compile Include="Outbox\RavenTestBaseForSagaPersistenceOptions.cs" />
     <Compile Include="Outbox\When_adding_outbox_messages.cs" />
     <Compile Include="Outbox\When_cleaning_outbox_messages.cs" />
     <Compile Include="Persistence\DocumentStoreExtensionsForVoron.cs" />

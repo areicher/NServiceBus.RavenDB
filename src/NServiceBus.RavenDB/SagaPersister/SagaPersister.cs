@@ -1,7 +1,6 @@
 namespace NServiceBus.SagaPersisters.RavenDB
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
@@ -11,13 +10,12 @@ namespace NServiceBus.SagaPersisters.RavenDB
     using NServiceBus.Sagas;
     using Raven.Abstractions.Commands;
     using Raven.Client;
+    using Raven.Json.Linq;
 
     class SagaPersister : ISagaPersister
     {
         internal const string UniqueValueMetadataKey = "NServiceBus-UniqueValue";
-        static readonly ConcurrentDictionary<string, bool> PropertyCache = new ConcurrentDictionary<string, bool>();
-
-        public bool AllowUnsafeLoads { get; set; }
+        const string UniqueDocIdKey = "NServiceBus-UnqieDocId";
 
         public Task Save(IContainSagaData saga, SagaMetadata metadata, ContextBag context)
         {
@@ -25,7 +23,26 @@ namespace NServiceBus.SagaPersisters.RavenDB
 
             session.Store(saga);
 
-            StoreUniqueProperty(saga, session, metadata);
+            var correlationProperty = metadata.CorrelationProperties.Single();
+
+            var uniqueProperty = GetUniqueProperty(metadata, correlationProperty);
+
+            var value = uniqueProperty.GetValue(saga);
+            var id = SagaUniqueIdentity.FormatId(saga.GetType(), new KeyValuePair<string, object>(uniqueProperty.Name, value));
+
+
+            var sagaDocId = session.Advanced.DocumentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier(saga.Id, saga.GetType(), false);
+
+            session.Store(new SagaUniqueIdentity
+            {
+                Id = id,
+                SagaId = saga.Id,
+                UniqueValue = value,
+                SagaDocId = sagaDocId
+            });
+
+            session.Advanced.GetMetadataFor(saga)[UniqueDocIdKey] = id;
+
             return Task.FromResult(0);
         }
 
@@ -47,6 +64,9 @@ namespace NServiceBus.SagaPersisters.RavenDB
 
             var lookupId = SagaUniqueIdentity.FormatId(typeof(T), new KeyValuePair<string, object>(property, value));
 
+            //store it in the context to be able to optimize deletes for legacy sagas that don't have the id in metadata
+            context.Set(UniqueDocIdKey, lookupId);
+
             var lookup = session
                 .Include("SagaDocId") //tell raven to pull the saga doc as well to save us a round-trip
                 .Load<SagaUniqueIdentity>(lookupId);
@@ -66,62 +86,42 @@ namespace NServiceBus.SagaPersisters.RavenDB
             var session = context.Get<IDocumentSession>();
             session.Delete(saga);
 
-            // TODO: Fix
-            //var correlationProperty = options.Metadata.CorrelationProperties.Sinfg();
+            string uniqueDocumentId;
+            RavenJToken uniqueDocumentIdMetadata;
 
-            //if (correlationProperty == null)
-            //{
-            //    return Task.FromResult(0);
-            //}
-
-            //var uniqueProperty = GetUniqueProperty(options.Metadata, correlationProperty);
-            //DeleteUniqueProperty(saga, session, new KeyValuePair<string, object>(uniqueProperty.Name, uniqueProperty.GetValue(saga)));
-            return Task.FromResult(0);
-        }
-
-     
-
-        static PropertyInfo GetUniqueProperty(SagaMetadata metadata, CorrelationProperty correlationProperty)
-        {
-            // TODO: Check assumption
-            return metadata.SagaEntityType.GetProperties().Single(p => p.CanRead && p.Name == correlationProperty.Name);
-        }
-        
-        static void StoreUniqueProperty(IContainSagaData saga, IDocumentSession session, SagaMetadata sagaMetadata)
-        {
-            var correlationProperty = sagaMetadata.CorrelationProperties.Single();
-
-            var uniqueProperty = GetUniqueProperty(sagaMetadata, correlationProperty);
-
-            var value = uniqueProperty.GetValue(saga);
-            var id = SagaUniqueIdentity.FormatId(saga.GetType(), new KeyValuePair<string, object>(uniqueProperty.Name, value));
-            var sagaDocId = session.Advanced.DocumentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier(saga.Id, saga.GetType(), false);
-
-
-            session.Store(new SagaUniqueIdentity
+            if (session.Advanced.GetMetadataFor(saga).TryGetValue(UniqueDocIdKey, out uniqueDocumentIdMetadata))
             {
-                Id = id,
-                SagaId = saga.Id,
-                UniqueValue = value,
-                SagaDocId = sagaDocId
-            });
+                uniqueDocumentId = uniqueDocumentIdMetadata.Value<string>();
+            }
+            else
+            {
+                context.TryGet(UniqueDocIdKey, out uniqueDocumentId);
+            }
 
-            SetUniqueValueMetadata(saga, session, new KeyValuePair<string, object>(uniqueProperty.Name, value));
-        }
+            if (string.IsNullOrEmpty(uniqueDocumentId))
+            {
+                var uniqueDoc = session.Query<SagaUniqueIdentity>()
+                    .SingleOrDefault(d => d.SagaId == saga.Id);
 
-        static void SetUniqueValueMetadata(IContainSagaData saga, IDocumentSession session, KeyValuePair<string, object> uniqueProperty)
-        {
-            session.Advanced.GetMetadataFor(saga)[UniqueValueMetadataKey] = uniqueProperty.Value.ToString();
-        }
+                if (uniqueDoc != null)
+                {
+                    session.Delete(uniqueDoc);
+                }
 
-        static void DeleteUniqueProperty(IContainSagaData saga, IDocumentSession session, KeyValuePair<string, object> uniqueProperty)
-        {
-            var id = SagaUniqueIdentity.FormatId(saga.GetType(), uniqueProperty);
+                return Task.FromResult(0);
+            }
 
             session.Advanced.Defer(new DeleteCommandData
             {
-                Key = id
+                Key = uniqueDocumentId
             });
+
+            return Task.FromResult(0);
+        }
+
+        static PropertyInfo GetUniqueProperty(SagaMetadata metadata, CorrelationProperty correlationProperty)
+        {
+            return metadata.SagaEntityType.GetProperties().Single(p => p.CanRead && p.Name == correlationProperty.Name);
         }
     }
 }

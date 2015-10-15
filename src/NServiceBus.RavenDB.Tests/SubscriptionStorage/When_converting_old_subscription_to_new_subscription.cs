@@ -8,7 +8,6 @@
     using NServiceBus.RavenDB.Timeouts;
     using NServiceBus.Support;
     using NServiceBus.Unicast.Subscriptions;
-    using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
     using NServiceBus.Unicast.Subscriptions.RavenDB;
     using NUnit.Framework;
     using Raven.Client.Listeners;
@@ -18,8 +17,6 @@
     [TestFixture]
     public class When_converting_old_subscription_to_new_subscription : RavenDBPersistenceTestBase
     {
-        SubscriptionPersister persister;
-
         public override void SetUp()
         {
             base.SetUp();
@@ -40,18 +37,15 @@
                 Clients = new List<LegacyAddress>
                 {
                     new LegacyAddress("timeouts", RuntimeEnvironment.MachineName),
-                    new LegacyAddress("mytestendpoint", RuntimeEnvironment.MachineName),
+                    new LegacyAddress("mytestendpoint", RuntimeEnvironment.MachineName)
                 },
-                MessageType = messageType,
+                MessageType = messageType
             }, Subscription.FormatId(messageType));
             session.SaveChanges();
 
             List<string> subscriptions = null;
 
-            var exception = await Catch(async () =>
-            {
-                subscriptions = (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new SubscriptionStorageOptions(new ContextBag()))).ToList();
-            });
+            var exception = await Catch(async () => { subscriptions = (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new ContextBag())).ToList(); });
             Assert.Null(exception);
             Assert.AreEqual("timeouts" + "@" + RuntimeEnvironment.MachineName, subscriptions.ElementAt(0));
             Assert.AreEqual("mytestendpoint" + "@" + RuntimeEnvironment.MachineName, subscriptions.ElementAt(1));
@@ -67,17 +61,14 @@
                 Clients = new List<LegacyAddress>
                 {
                     new LegacyAddress("timeouts", null),
-                    new LegacyAddress("mytestendpoint", null),
+                    new LegacyAddress("mytestendpoint", null)
                 },
-                MessageType = messageType,
+                MessageType = messageType
             }, Subscription.FormatId(messageType));
             session.SaveChanges();
 
             List<string> subscriptions = null;
-            var exception = await Catch(async () =>
-            {
-                subscriptions = (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new SubscriptionStorageOptions(new ContextBag()))).ToList();
-            });
+            var exception = await Catch(async () => { subscriptions = (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new ContextBag())).ToList(); });
             Assert.Null(exception);
             Assert.AreEqual("timeouts", subscriptions.ElementAt(0));
             Assert.AreEqual("mytestendpoint", subscriptions.ElementAt(1));
@@ -91,15 +82,12 @@
             session.Store(new OldSubscription
             {
                 Clients = new List<LegacyAddress>(),
-                MessageType = messageType,
+                MessageType = messageType
             }, Subscription.FormatId(messageType));
             session.SaveChanges();
 
             List<string> subscriptions = null;
-            var exception = await Catch(async () =>
-            {
-                subscriptions = (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new SubscriptionStorageOptions(new ContextBag()))).ToList();
-            });
+            var exception = await Catch(async () => { subscriptions = (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new ContextBag())).ToList(); });
             Assert.Null(exception);
             Assert.IsEmpty(subscriptions);
         }
@@ -116,16 +104,15 @@
                     "timeouts" + "@" + RuntimeEnvironment.MachineName,
                     "mytestendpoint" + "@" + RuntimeEnvironment.MachineName
                 },
-                MessageType = messageType,
+                MessageType = messageType
             }, Subscription.FormatId(messageType));
             session.SaveChanges();
 
-            var exception = await Catch(async() =>
-            {
-                (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new SubscriptionStorageOptions(new ContextBag()))).ToList();
-            });
+            var exception = await Catch(async () => { (await persister.GetSubscriberAddressesForMessage(MessageTypes.MessageA, new ContextBag())).ToList(); });
             Assert.Null(exception);
         }
+
+        SubscriptionPersister persister;
 
         class FakeSubscriptionClrType : IDocumentConversionListener
         {

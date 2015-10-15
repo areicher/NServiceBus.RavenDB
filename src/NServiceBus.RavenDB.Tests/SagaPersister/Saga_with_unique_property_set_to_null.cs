@@ -12,18 +12,18 @@ public class Saga_with_unique_property_set_to_null : RavenDBPersistenceTestBase
     public void should_throw_a_ArgumentNullException()
     {
         var saga1 = new SagaData
-            {
-                Id = Guid.NewGuid(),
-                UniqueString = null
-            };
+        {
+            Id = Guid.NewGuid(),
+            UniqueString = null
+        };
 
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+        var context = this.NewSagaPersistenceOptions(out session);
         var persister = new SagaPersister();
 
         Assert.Throws<ArgumentNullException>(() =>
         {
-            persister.Save(saga1, options);
+            persister.Save(saga1, this.CreateMetadata<SomeSaga>(), context);
             session.SaveChanges();
         });
     }
@@ -35,7 +35,7 @@ public class Saga_with_unique_property_set_to_null : RavenDBPersistenceTestBase
             mapper.ConfigureMapping<Message>(m => m.UniqueString).ToSaga(s => s.UniqueString);
         }
 
-        private class Message
+        class Message
         {
             public string UniqueString { get; set; }
         }
@@ -43,11 +43,10 @@ public class Saga_with_unique_property_set_to_null : RavenDBPersistenceTestBase
 
     class SagaData : IContainSagaData
     {
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        public string UniqueString { get; set; }
         public Guid Id { get; set; }
         public string Originator { get; set; }
         public string OriginalMessageId { get; set; }
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        public string UniqueString { get; set; }
-
     }
 }

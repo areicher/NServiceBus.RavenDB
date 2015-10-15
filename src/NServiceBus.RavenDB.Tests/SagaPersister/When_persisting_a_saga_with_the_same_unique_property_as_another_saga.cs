@@ -14,29 +14,29 @@ public class When_persisting_a_saga_with_the_same_unique_property_as_another_sag
     public async Task It_should_enforce_uniqueness()
     {
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+        var options = this.NewSagaPersistenceOptions(out session);
         var persister = new SagaPersister();
         var uniqueString = Guid.NewGuid().ToString();
 
         var saga1 = new SagaData
-            {
-                Id = Guid.NewGuid(),
-                UniqueString = uniqueString
-            };
+        {
+            Id = Guid.NewGuid(),
+            UniqueString = uniqueString
+        };
 
-        await persister.Save(saga1, options);
+        await persister.Save(saga1, this.CreateMetadata<SomeSaga>(), options);
         session.SaveChanges();
         session.Dispose();
 
         Assert.Throws<ConcurrencyException>(() =>
         {
-            options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+            options = this.NewSagaPersistenceOptions(out session);
             var saga2 = new SagaData
-                {
-                    Id = Guid.NewGuid(),
-                    UniqueString = uniqueString
-                };
-            persister.Save(saga2, options);
+            {
+                Id = Guid.NewGuid(),
+                UniqueString = uniqueString
+            };
+            persister.Save(saga2, this.CreateMetadata<SomeSaga>(), options);
             session.SaveChanges();
         });
     }
@@ -48,7 +48,7 @@ public class When_persisting_a_saga_with_the_same_unique_property_as_another_sag
             mapper.ConfigureMapping<Message>(m => m.UniqueString).ToSaga(s => s.UniqueString);
         }
 
-        private class Message
+        class Message
         {
             public string UniqueString { get; set; }
         }
@@ -56,11 +56,10 @@ public class When_persisting_a_saga_with_the_same_unique_property_as_another_sag
 
     class SagaData : IContainSagaData
     {
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        public string UniqueString { get; set; }
         public Guid Id { get; set; }
         public string Originator { get; set; }
         public string OriginalMessageId { get; set; }
-
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        public string UniqueString { get; set; }
     }
 }

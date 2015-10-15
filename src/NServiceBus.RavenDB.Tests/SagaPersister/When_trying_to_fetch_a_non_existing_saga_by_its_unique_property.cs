@@ -13,7 +13,7 @@ public class When_trying_to_fetch_a_non_existing_saga_by_its_unique_property : R
     public async Task It_should_return_null()
     {
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+        var options = this.NewSagaPersistenceOptions(out session);
         var persister = new SagaPersister();
         Assert.Null(await persister.Get<SagaData>("UniqueString", Guid.NewGuid().ToString(), options));
     }
@@ -25,7 +25,7 @@ public class When_trying_to_fetch_a_non_existing_saga_by_its_unique_property : R
             mapper.ConfigureMapping<Message>(m => m.UniqueString).ToSaga(s => s.UniqueString);
         }
 
-        private class Message
+        class Message
         {
             public string UniqueString { get; set; }
         }
@@ -33,9 +33,9 @@ public class When_trying_to_fetch_a_non_existing_saga_by_its_unique_property : R
 
     class SagaData : IContainSagaData
     {
+        public string UniqueString { get; set; }
         public Guid Id { get; set; }
         public string Originator { get; set; }
         public string OriginalMessageId { get; set; }
-        public string UniqueString { get; set; }
     }
 }

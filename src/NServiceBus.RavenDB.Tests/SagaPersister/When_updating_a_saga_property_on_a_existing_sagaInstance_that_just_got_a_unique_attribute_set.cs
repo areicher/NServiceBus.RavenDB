@@ -13,20 +13,20 @@ public class When_updating_a_saga_property_on_a_existing_sagaInstance_that_just_
     public async Task It_should_set_the_attribute_and_allow_the_update()
     {
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+        var options = this.NewSagaPersistenceOptions(out session);
         var persister = new SagaPersister();
         var uniqueString = Guid.NewGuid().ToString();
 
         var anotherUniqueString = Guid.NewGuid().ToString();
 
         var saga1 = new SagaData
-            {
-                Id = Guid.NewGuid(),
-                UniqueString = uniqueString,
-                NonUniqueString = "notUnique"
-            };
+        {
+            Id = Guid.NewGuid(),
+            UniqueString = uniqueString,
+            NonUniqueString = "notUnique"
+        };
 
-        await persister.Save(saga1, options);
+        await persister.Save(saga1, this.CreateMetadata<SomeSaga>(), options);
         session.SaveChanges();
         session.Dispose();
 
@@ -37,7 +37,7 @@ public class When_updating_a_saga_property_on_a_existing_sagaInstance_that_just_
             session.SaveChanges();
         }
 
-        options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+        options = this.NewSagaPersistenceOptions(out session);
         var saga = await persister.Get<SagaData>(saga1.Id, options);
         saga.UniqueString = anotherUniqueString;
         await persister.Update(saga, options);
@@ -58,7 +58,7 @@ public class When_updating_a_saga_property_on_a_existing_sagaInstance_that_just_
             mapper.ConfigureMapping<Message>(m => m.UniqueString).ToSaga(s => s.UniqueString);
         }
 
-        private class Message
+        class Message
         {
             public string UniqueString { get; set; }
         }
@@ -66,14 +66,13 @@ public class When_updating_a_saga_property_on_a_existing_sagaInstance_that_just_
 
     class SagaData : IContainSagaData
     {
-        public Guid Id { get; set; }
-        public string Originator { get; set; }
-        public string OriginalMessageId { get; set; }
-
         // ReSharper disable once UnusedAutoPropertyAccessor.Local
         public string UniqueString { get; set; }
 
         // ReSharper disable once UnusedAutoPropertyAccessor.Local
         public string NonUniqueString { get; set; }
+        public Guid Id { get; set; }
+        public string Originator { get; set; }
+        public string OriginalMessageId { get; set; }
     }
 }

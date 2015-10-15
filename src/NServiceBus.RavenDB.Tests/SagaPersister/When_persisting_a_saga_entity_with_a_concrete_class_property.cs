@@ -13,25 +13,26 @@ public class When_persisting_a_saga_entity_with_a_concrete_class_property : Rave
     public async Task Public_setters_and_getters_of_concrete_classes_should_be_persisted()
     {
         var entity = new SagaData
-                {
-                    Id = Guid.NewGuid(),
-                    TestComponent = new TestComponent
-                        {
-                            Property = "Prop"
-                        }
-                };
+        {
+            Id = Guid.NewGuid(),
+            TestComponent = new TestComponent
+            {
+                Property = "Prop"
+            }
+        };
 
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+        var options = this.NewSagaPersistenceOptions(out session);
         var persister = new SagaPersister();
-        await persister.Save(entity, options);
+        await persister.Save(entity, this.CreateMetadata<SomeSaga>(), options);
         session.SaveChanges();
         var savedEntity = await persister.Get<SagaData>(entity.Id, options);
         Assert.AreEqual(entity.TestComponent.Property, savedEntity.TestComponent.Property);
         Assert.AreEqual(entity.TestComponent.AnotherProperty, savedEntity.TestComponent.AnotherProperty);
     }
 
-    class SomeSaga : Saga<SagaData> {
+    class SomeSaga : Saga<SagaData>
+    {
         protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
         {
         }
@@ -39,10 +40,10 @@ public class When_persisting_a_saga_entity_with_a_concrete_class_property : Rave
 
     class SagaData : IContainSagaData
     {
+        public TestComponent TestComponent { get; set; }
         public Guid Id { get; set; }
         public string Originator { get; set; }
         public string OriginalMessageId { get; set; }
-        public TestComponent TestComponent { get; set; }
     }
 
     class TestComponent

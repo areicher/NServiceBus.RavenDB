@@ -9,12 +9,14 @@
 
     class OutboxPersister : IOutboxStorage
     {
-        public IDocumentStore DocumentStore { get; set; }
-
+        public OutboxPersister(IDocumentStore documentStore)
+        {
+            this.documentStore = documentStore;
+        }
         public Task<OutboxMessage> Get(string messageId, ReadOnlyContextBag options)
         {
             OutboxRecord result;
-            using (var session = DocumentStore.OpenSession())
+            using (var session = documentStore.OpenSession())
             {
                 // We use Load operation and not queries to avoid stale results
                 result = session.Load<OutboxRecord>(GetOutboxRecordId(messageId));
@@ -34,7 +36,7 @@
 
         public Task<OutboxTransaction> BeginTransaction(ReadOnlyContextBag context)
         {
-            var session = DocumentStore.OpenSession();
+            var session = documentStore.OpenSession();
 
             session.Advanced.UseOptimisticConcurrency = true;
 
@@ -45,8 +47,8 @@
 
         public Task Store(OutboxMessage message, OutboxTransaction transaction, ReadOnlyContextBag context)
         {
-            var session = ((RavenDBOutboxTransaction) transaction).Session;
-          
+            var session = ((RavenDBOutboxTransaction)transaction).Session;
+
             session.Store(new OutboxRecord
             {
                 MessageId = message.MessageId,
@@ -65,7 +67,7 @@
 
         public Task SetAsDispatched(string messageId, ReadOnlyContextBag options)
         {
-            using (var session = DocumentStore.OpenSession())
+            using (var session = documentStore.OpenSession())
             {
                 session.Advanced.UseOptimisticConcurrency = true;
                 var outboxMessage = session.Load<OutboxRecord>(GetOutboxRecordId(messageId));
@@ -86,5 +88,7 @@
         {
             return "Outbox/" + messageId;
         }
+
+        IDocumentStore documentStore;
     }
 }

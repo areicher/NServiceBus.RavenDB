@@ -13,7 +13,7 @@ public class When_updating_a_saga_without_unique_properties : RavenDBPersistence
     public async Task It_should_persist_successfully()
     {
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+        var options = this.NewSagaPersistenceOptions(out session);
         var persister = new SagaPersister();
         var uniqueString = Guid.NewGuid().ToString();
         var anotherUniqueString = Guid.NewGuid().ToString();
@@ -24,7 +24,7 @@ public class When_updating_a_saga_without_unique_properties : RavenDBPersistence
             UniqueString = uniqueString,
             NonUniqueString = "notUnique"
         };
-        await persister.Save(saga1, options);
+        await persister.Save(saga1, this.CreateMetadata<SomeSaga>(), options);
         session.SaveChanges();
 
         var saga = await persister.Get<SagaData>(saga1.Id, options);
@@ -43,12 +43,12 @@ public class When_updating_a_saga_without_unique_properties : RavenDBPersistence
 
     class SagaData : IContainSagaData
     {
-        public Guid Id { get; set; }
-        public string Originator { get; set; }
-        public string OriginalMessageId { get; set; }
 // ReSharper disable once UnusedAutoPropertyAccessor.Local
         public string UniqueString { get; set; }
 // ReSharper disable once UnusedAutoPropertyAccessor.Local
         public string NonUniqueString { get; set; }
+        public Guid Id { get; set; }
+        public string Originator { get; set; }
+        public string OriginalMessageId { get; set; }
     }
 }

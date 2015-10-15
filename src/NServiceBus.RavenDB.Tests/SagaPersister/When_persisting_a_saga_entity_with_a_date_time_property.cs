@@ -18,9 +18,9 @@ public class When_persisting_a_saga_entity_with_a_DateTime_property : RavenDBPer
                 DateTimeProperty = DateTime.Parse("12/02/2010 12:00:00.01")
             };
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+        var options = this.NewSagaPersistenceOptions(out session);
         var persister = new SagaPersister();
-        await persister.Save(entity, options);
+        await persister.Save(entity, this.CreateMetadata<SomeSaga>(), options);
         session.SaveChanges();
         var savedEntity = await persister.Get<SagaData>(entity.Id, options);
         Assert.AreEqual(entity.DateTimeProperty, savedEntity.DateTimeProperty);

@@ -1,20 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace NServiceBus.RavenDB.Tests.Timeouts
+﻿namespace NServiceBus.RavenDB.Tests.Timeouts
 {
+    using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using NServiceBus.Extensibility;
-    using NServiceBus.Timeout.Core;
+    using NServiceBus.TimeoutPersisters.RavenDB;
     using NUnit.Framework;
     using Raven.Client;
     using Raven.Client.Document;
-    using TimeoutData = Timeout.Core.TimeoutData;
-    using Timeout = TimeoutPersisters.RavenDB.TimeoutData;
-    using TimeoutPersisters.RavenDB;
+    using Timeout = NServiceBus.TimeoutPersisters.RavenDB.TimeoutData;
+    using TimeoutData = NServiceBus.Timeout.Core.TimeoutData;
 
     [TestFixture]
     public class Should_not_skip_timeouts
@@ -27,7 +25,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
             using (var documentStore = new DocumentStore
             {
                 Url = "http://localhost:8083",
-                DefaultDatabase = db,
+                DefaultDatabase = db
             }.Initialize())
             {
                 new TimeoutsIndex().Execute(documentStore);
@@ -35,10 +33,10 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 var query = new QueryTimeouts(documentStore)
                 {
                     EndpointName = "foo",
-                    TriggerCleanupEvery = TimeSpan.FromHours(1), // Make sure cleanup doesn't run automatically
+                    TriggerCleanupEvery = TimeSpan.FromHours(1) // Make sure cleanup doesn't run automatically
                 };
                 var persister = new TimeoutPersister(documentStore);
-                var options = new TimeoutPersistenceOptions(new ContextBag());
+                var context = new ContextBag();
 
                 var startSlice = DateTime.UtcNow.AddYears(-10);
                 // avoid cleanup from running during the test by making it register as being run
@@ -49,24 +47,24 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 var finishedAdding = false;
 
                 new Thread(() =>
-                           {
-                               var sagaId = Guid.NewGuid();
-                               for (var i = 0; i < 10000; i++)
-                               {
-                                   var td = new TimeoutData
-                                            {
-                                                SagaId = sagaId,
-                                                Destination = "queue@machine",
-                                                Time = DateTime.UtcNow.AddSeconds(RandomProvider.GetThreadRandom().Next(1, 20)),
-                                                OwningTimeoutManager = string.Empty,
-                                            };
-                                   persister.Add(td, options);
-                                   expected.Add(new Tuple<string, DateTime>(td.Id, td.Time));
-                                   lastTimeout = (td.Time > lastTimeout) ? td.Time : lastTimeout;
-                               }
-                               finishedAdding = true;
-                               Trace.WriteLine("*** Finished adding ***");
-                           }).Start();
+                {
+                    var sagaId = Guid.NewGuid();
+                    for (var i = 0; i < 10000; i++)
+                    {
+                        var td = new TimeoutData
+                        {
+                            SagaId = sagaId,
+                            Destination = "queue@machine",
+                            Time = DateTime.UtcNow.AddSeconds(RandomProvider.GetThreadRandom().Next(1, 20)),
+                            OwningTimeoutManager = string.Empty
+                        };
+                        persister.Add(td, context);
+                        expected.Add(new Tuple<string, DateTime>(td.Id, td.Time));
+                        lastTimeout = (td.Time > lastTimeout) ? td.Time : lastTimeout;
+                    }
+                    finishedAdding = true;
+                    Trace.WriteLine("*** Finished adding ***");
+                }).Start();
 
                 // Mimic the behavior of the TimeoutPersister coordinator
                 var found = 0;
@@ -80,7 +78,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                             startSlice = timeout.DueTime;
                         }
 
-                        Assert.NotNull(await persister.Remove(timeout.Id, options));
+                        Assert.NotNull(await persister.Remove(timeout.Id, context));
                         found++;
                     }
                 }
@@ -92,12 +90,15 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 while (true)
                 {
                     var chunkToCleanup = query.GetCleanupChunk(DateTime.UtcNow.AddDays(1)).ToArray();
-                    if (chunkToCleanup.Length == 0) break;
+                    if (chunkToCleanup.Length == 0)
+                    {
+                        break;
+                    }
 
                     found += chunkToCleanup.Length;
                     foreach (var tuple in chunkToCleanup)
                     {
-                        Assert.NotNull(await persister.Remove(tuple.Id, options));
+                        Assert.NotNull(await persister.Remove(tuple.Id, context));
                     }
 
                     WaitForIndexing(documentStore);
@@ -121,7 +122,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
             using (var documentStore = new DocumentStore
             {
                 Url = "http://localhost:8083",
-                DefaultDatabase = db,
+                DefaultDatabase = db
             }.Initialize())
             {
                 new TimeoutsIndex().Execute(documentStore);
@@ -129,10 +130,10 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 var query = new QueryTimeouts(documentStore)
                 {
                     EndpointName = "foo",
-                    TriggerCleanupEvery = TimeSpan.FromDays(1), // Make sure cleanup doesn't run automatically
+                    TriggerCleanupEvery = TimeSpan.FromDays(1) // Make sure cleanup doesn't run automatically
                 };
                 var persister = new TimeoutPersister(documentStore);
-                var options = new TimeoutPersistenceOptions(new ContextBag());
+                var context = new ContextBag();
 
                 var startSlice = DateTime.UtcNow.AddYears(-10);
                 // avoid cleanup from running during the test by making it register as being run
@@ -145,53 +146,53 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 var finishedAdding2 = false;
 
                 new Thread(() =>
-                           {
-                               var sagaId = Guid.NewGuid();
-                               for (var i = 0; i < insertsPerThread; i++)
-                               {
-                                   var td = new TimeoutData
-                                            {
-                                                SagaId = sagaId,
-                                                Destination = "queue@machine",
-                                                Time = DateTime.UtcNow.AddSeconds(RandomProvider.GetThreadRandom().Next(1, 20)),
-                                                OwningTimeoutManager = string.Empty,
-                                            };
-                                   persister.Add(td, options);
-                                   Interlocked.Increment(ref expected);
-                                   lastExpectedTimeout = (td.Time > lastExpectedTimeout) ? td.Time : lastExpectedTimeout;
-                               }
-                               finishedAdding1 = true;
-                               Console.WriteLine("*** Finished adding ***");
-                           }).Start();
+                {
+                    var sagaId = Guid.NewGuid();
+                    for (var i = 0; i < insertsPerThread; i++)
+                    {
+                        var td = new TimeoutData
+                        {
+                            SagaId = sagaId,
+                            Destination = "queue@machine",
+                            Time = DateTime.UtcNow.AddSeconds(RandomProvider.GetThreadRandom().Next(1, 20)),
+                            OwningTimeoutManager = string.Empty
+                        };
+                        persister.Add(td, context);
+                        Interlocked.Increment(ref expected);
+                        lastExpectedTimeout = (td.Time > lastExpectedTimeout) ? td.Time : lastExpectedTimeout;
+                    }
+                    finishedAdding1 = true;
+                    Console.WriteLine("*** Finished adding ***");
+                }).Start();
 
                 new Thread(() =>
-                           {
-                               using (var store = new DocumentStore
-                               {
-                                   Url = "http://localhost:8083",
-                                   DefaultDatabase = db,
-                               }.Initialize())
-                               {
-                                   var persister2 = new TimeoutPersister(store);
+                {
+                    using (var store = new DocumentStore
+                    {
+                        Url = "http://localhost:8083",
+                        DefaultDatabase = db
+                    }.Initialize())
+                    {
+                        var persister2 = new TimeoutPersister(store);
 
-                                   var sagaId = Guid.NewGuid();
-                                   for (var i = 0; i < insertsPerThread; i++)
-                                   {
-                                       var td = new TimeoutData
-                                                {
-                                                    SagaId = sagaId,
-                                                    Destination = "queue@machine",
-                                                    Time = DateTime.UtcNow.AddSeconds(RandomProvider.GetThreadRandom().Next(1, 20)),
-                                                    OwningTimeoutManager = string.Empty,
-                                                };
-                                       persister2.Add(td, options);
-                                       Interlocked.Increment(ref expected);
-                                       lastExpectedTimeout = (td.Time > lastExpectedTimeout) ? td.Time : lastExpectedTimeout;
-                                   }
-                               }
-                               finishedAdding2 = true;
-                               Console.WriteLine("*** Finished adding via a second client connection ***");
-                           }).Start();
+                        var sagaId = Guid.NewGuid();
+                        for (var i = 0; i < insertsPerThread; i++)
+                        {
+                            var td = new TimeoutData
+                            {
+                                SagaId = sagaId,
+                                Destination = "queue@machine",
+                                Time = DateTime.UtcNow.AddSeconds(RandomProvider.GetThreadRandom().Next(1, 20)),
+                                OwningTimeoutManager = string.Empty
+                            };
+                            persister2.Add(td, context);
+                            Interlocked.Increment(ref expected);
+                            lastExpectedTimeout = (td.Time > lastExpectedTimeout) ? td.Time : lastExpectedTimeout;
+                        }
+                    }
+                    finishedAdding2 = true;
+                    Console.WriteLine("*** Finished adding via a second client connection ***");
+                }).Start();
 
                 // Mimic the behavior of the TimeoutPersister coordinator
                 var found = 0;
@@ -205,7 +206,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                             startSlice = timeoutData.DueTime;
                         }
 
-                        Assert.NotNull(await persister.Remove(timeoutData.Id, options));
+                        Assert.NotNull(await persister.Remove(timeoutData.Id, context));
                         found++;
                     }
                 }
@@ -218,12 +219,15 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 {
                     var chunkToCleanup = query.GetCleanupChunk(DateTime.UtcNow.AddDays(1)).ToArray();
                     Console.WriteLine("Cleanup: got a chunk of size " + chunkToCleanup.Length);
-                    if (chunkToCleanup.Length == 0) break;
+                    if (chunkToCleanup.Length == 0)
+                    {
+                        break;
+                    }
 
                     found += chunkToCleanup.Length;
                     foreach (var tuple in chunkToCleanup)
                     {
-                        Assert.NotNull(await persister.Remove(tuple.Id, options));
+                        Assert.NotNull(await persister.Remove(tuple.Id, context));
                     }
 
                     WaitForIndexing(documentStore);
@@ -243,18 +247,20 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
         {
             var databaseCommands = store.DatabaseCommands;
             if (db != null)
+            {
                 databaseCommands = databaseCommands.ForDatabase(db);
+            }
             var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20));
             Assert.True(spinUntil);
         }
 
         static class RandomProvider
         {
-            private static int seed = Environment.TickCount;
+            static int seed = Environment.TickCount;
 
-            private static ThreadLocal<Random> randomWrapper = new ThreadLocal<Random>(() =>
+            static ThreadLocal<Random> randomWrapper = new ThreadLocal<Random>(() =>
                 new Random(Interlocked.Increment(ref seed))
-            );
+                );
 
             public static Random GetThreadRandom()
             {

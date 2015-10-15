@@ -29,6 +29,7 @@
         /// </summary>
         /// <param name="cfg">Object to attach to</param>
         /// <returns></returns>
+        //TODO: obsolete
         public static PersistenceExtentions<RavenDBPersistence> AllowStaleSagaReads(this PersistenceExtentions<RavenDBPersistence> cfg)
         {
             cfg.GetSettings().Set(AllowStaleSagaReadsKey, true);

@@ -1,47 +1,50 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace NServiceBus.RavenDB.Tests.Timeouts
+﻿namespace NServiceBus.RavenDB.Tests.Timeouts
 {
+    using System;
+    using System.Collections.Generic;
     using System.Threading.Tasks;
     using NServiceBus.Extensibility;
-    using NServiceBus.Timeout.Core;
+    using NServiceBus.Support;
+    using NServiceBus.TimeoutPersisters.RavenDB;
     using NUnit.Framework;
-    using Support;
-    using TimeoutPersisters.RavenDB;
-    using TimeoutData = Timeout.Core.TimeoutData;
-    using Timeout = TimeoutPersisters.RavenDB.TimeoutData;
+    using Timeout = NServiceBus.TimeoutPersisters.RavenDB.TimeoutData;
+    using TimeoutData = NServiceBus.Timeout.Core.TimeoutData;
 
     [TestFixture]
     [Ignore("These tests currently operate under the assumption TimeoutData.Id gets assigned by the persistence layer; need to revisit this")]
-    class When_removing_timeouts_from_the_storage:RavenDBPersistenceTestBase
+    class When_removing_timeouts_from_the_storage : RavenDBPersistenceTestBase
     {
         [Test]
         public async Task Should_return_the_correct_headers()
         {
-
             var persister = new TimeoutPersister(store);
 
             var headers = new Dictionary<string, string>
-                          {
-                              {"Bar", "34234"},
-                              {"Foo", "aString1"},
-                              {"Super", "aString2"}
-                          };
+            {
+                {"Bar", "34234"},
+                {"Foo", "aString1"},
+                {"Super", "aString2"}
+            };
 
             var timeout = new TimeoutData
             {
                 Time = DateTime.UtcNow.AddHours(-1),
                 Destination = "timeouts@" + RuntimeEnvironment.MachineName,
                 SagaId = Guid.NewGuid(),
-                State = new byte[] { 1, 1, 133, 200 },
+                State = new byte[]
+                {
+                    1,
+                    1,
+                    133,
+                    200
+                },
                 Headers = headers,
-                OwningTimeoutManager = "MyTestEndpoint",
+                OwningTimeoutManager = "MyTestEndpoint"
             };
-            var options = new TimeoutPersistenceOptions(new ContextBag());
-            await persister.Add(timeout, options);
+            var context = new ContextBag();
+            await persister.Add(timeout, context);
 
-            var timeoutData = await persister.Remove(timeout.Id, options);
+            var timeoutData = await persister.Remove(timeout.Id, context);
 
             CollectionAssert.AreEqual(headers, timeoutData.Headers);
         }
@@ -53,7 +56,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
 
             var query = new QueryTimeouts(store)
             {
-                EndpointName = "MyTestEndpoint",
+                EndpointName = "MyTestEndpoint"
             };
             var persister = new TimeoutPersister(store);
 
@@ -62,23 +65,23 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 Time = DateTime.Now.AddYears(-1),
                 OwningTimeoutManager = "MyTestEndpoint",
                 Headers = new Dictionary<string, string>
-                                   {
-                                       {"Header1", "Value1"}
-                                   }
+                {
+                    {"Header1", "Value1"}
+                }
             };
-            var options = new TimeoutPersistenceOptions(new ContextBag());
+            var context = new ContextBag();
             var t2 = new TimeoutData
             {
                 Time = DateTime.Now.AddYears(-1),
                 OwningTimeoutManager = "MyTestEndpoint",
                 Headers = new Dictionary<string, string>
-                                   {
-                                       {"Header1", "Value1"}
-                                   }
+                {
+                    {"Header1", "Value1"}
+                }
             };
 
-            await persister.Add(t1, options);
-            await persister.Add(t2, options);
+            await persister.Add(t1, context);
+            await persister.Add(t2, context);
 
             WaitForIndexing(store);
 
@@ -86,7 +89,7 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
 
             foreach (var timeout in timeouts.DueTimeouts)
             {
-                await persister.Remove(timeout.Id, options);
+                await persister.Remove(timeout.Id, context);
             }
 
             using (var session = store.OpenSession())
@@ -111,9 +114,9 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 Time = DateTime.Now.AddYears(1),
                 OwningTimeoutManager = "MyTestEndpoint",
                 Headers = new Dictionary<string, string>
-                                   {
-                                       {"Header1", "Value1"}
-                                   }
+                {
+                    {"Header1", "Value1"}
+                }
             };
             var t2 = new TimeoutData
             {
@@ -121,19 +124,19 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 Time = DateTime.Now.AddYears(1),
                 OwningTimeoutManager = "MyTestEndpoint",
                 Headers = new Dictionary<string, string>
-                                   {
-                                       {"Header1", "Value1"}
-                                   }
+                {
+                    {"Header1", "Value1"}
+                }
             };
 
-            var options = new TimeoutPersistenceOptions(new ContextBag());
-            await persister.Add(t1, options);
-            await persister.Add(t2, options);
+            var context = new ContextBag();
+            await persister.Add(t1, context);
+            await persister.Add(t2, context);
 
             WaitForIndexing(store);
 
-            await persister.RemoveTimeoutBy(sagaId1, options);
-            await persister.RemoveTimeoutBy(sagaId2, options);
+            await persister.RemoveTimeoutBy(sagaId1, context);
+            await persister.RemoveTimeoutBy(sagaId2, context);
 
             using (var session = store.OpenSession())
             {

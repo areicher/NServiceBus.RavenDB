@@ -3,15 +3,13 @@
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
+    using NServiceBus.Sagas;
     using NUnit.Framework;
     using Raven.Client;
     using Raven.Tests.Helpers;
 
     public class RavenDBPersistenceTestBase : RavenTestBase
     {
-        List<IDocumentSession> sessions = new List<IDocumentSession>();
-        protected IDocumentStore store;
-
         [SetUp]
         public virtual void SetUp()
         {
@@ -41,7 +39,7 @@
         }
 
         /// <summary>
-        /// This helper is necessary because RavenTestBase doesn't like Assert.Throws, Assert.That... with async void methods.
+        ///     This helper is necessary because RavenTestBase doesn't like Assert.Throws, Assert.That... with async void methods.
         /// </summary>
         protected static async Task<TException> Catch<TException>(Func<Task> action) where TException : Exception
         {
@@ -54,6 +52,17 @@
             {
                 return ex;
             }
+        }
+
+        List<IDocumentSession> sessions = new List<IDocumentSession>();
+        protected IDocumentStore store;
+    }
+
+    static class RavenDBPersistenceTestBaseExtensions
+    {
+        public static SagaMetadata CreateMetadata<T>(this RavenDBPersistenceTestBase test)
+        {
+            return SagaMetadata.Create(typeof(T));
         }
     }
 }

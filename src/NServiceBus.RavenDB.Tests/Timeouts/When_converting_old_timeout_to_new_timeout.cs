@@ -6,15 +6,13 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
     using NServiceBus.Extensibility;
     using NServiceBus.RavenDB.Timeouts;
     using NServiceBus.Support;
-    using NServiceBus.Timeout.Core;
     using NServiceBus.TimeoutPersisters.RavenDB;
     using NUnit.Framework;
+    using TimeoutData = NServiceBus.Timeout.Core.TimeoutData;
 
     [TestFixture]
     public class When_converting_old_timeout_to_new_timeout : RavenDBPersistenceTestBase
     {
-        TimeoutPersister persister;
-
         public override void SetUp()
         {
             base.SetUp();
@@ -40,18 +38,24 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 Time = DateTime.UtcNow.AddHours(-1),
                 Destination = new LegacyAddress("timeouts", RuntimeEnvironment.MachineName),
                 SagaId = Guid.NewGuid(),
-                State = new byte[] { 1, 1, 133, 200 },
+                State = new byte[]
+                {
+                    1,
+                    1,
+                    133,
+                    200
+                },
                 Headers = headers,
-                OwningTimeoutManager = "MyTestEndpoint",
+                OwningTimeoutManager = "MyTestEndpoint"
             };
-            var options = new TimeoutPersistenceOptions(new ContextBag());
+            var context = new ContextBag();
 
             var session = store.OpenSession();
             session.Store(timeout);
             session.SaveChanges();
 
-            Timeout.Core.TimeoutData removedTimeout = null;
-            var exception = await Catch(async () => { removedTimeout = await persister.Remove(timeout.Id, options); });
+            TimeoutData removedTimeout = null;
+            var exception = await Catch(async () => { removedTimeout = await persister.Remove(timeout.Id, context); });
             Assert.Null(exception);
             Assert.AreEqual("timeouts" + "@" + RuntimeEnvironment.MachineName, removedTimeout.Destination);
         }
@@ -71,18 +75,24 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 Time = DateTime.UtcNow.AddHours(-1),
                 Destination = new LegacyAddress("timeouts", null),
                 SagaId = Guid.NewGuid(),
-                State = new byte[] { 1, 1, 133, 200 },
+                State = new byte[]
+                {
+                    1,
+                    1,
+                    133,
+                    200
+                },
                 Headers = headers,
-                OwningTimeoutManager = "MyTestEndpoint",
+                OwningTimeoutManager = "MyTestEndpoint"
             };
-            var options = new TimeoutPersistenceOptions(new ContextBag());
+            var context = new ContextBag();
 
             var session = store.OpenSession();
             session.Store(timeout);
             session.SaveChanges();
 
-            Timeout.Core.TimeoutData removedTimeout = null;
-            var exception = await Catch(async () => { removedTimeout = await persister.Remove(timeout.Id, options); });
+            TimeoutData removedTimeout = null;
+            var exception = await Catch(async () => { removedTimeout = await persister.Remove(timeout.Id, context); });
             Assert.Null(exception);
             Assert.AreEqual("timeouts", removedTimeout.Destination);
         }
@@ -98,19 +108,27 @@ namespace NServiceBus.RavenDB.Tests.Timeouts
                 {"Super", "aString2"}
             };
 
-            var timeout = new Timeout.Core.TimeoutData
+            var timeout = new TimeoutData
             {
                 Time = DateTime.UtcNow.AddHours(-1),
                 Destination = "timouts" + "@" + RuntimeEnvironment.MachineName,
                 SagaId = Guid.NewGuid(),
-                State = new byte[] { 1, 1, 133, 200 },
+                State = new byte[]
+                {
+                    1,
+                    1,
+                    133,
+                    200
+                },
                 Headers = headers,
-                OwningTimeoutManager = "MyTestEndpoint",
+                OwningTimeoutManager = "MyTestEndpoint"
             };
-            var options = new TimeoutPersistenceOptions(new ContextBag());
+            var context = new ContextBag();
 
-            var exception = await Catch(async () => { await persister.Add(timeout, options); });
+            var exception = await Catch(async () => { await persister.Add(timeout, context); });
             Assert.Null(exception);
         }
+
+        TimeoutPersister persister;
     }
 }

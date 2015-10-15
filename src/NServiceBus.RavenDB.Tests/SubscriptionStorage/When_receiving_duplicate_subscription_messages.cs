@@ -4,7 +4,6 @@ using NServiceBus.Extensibility;
 using NServiceBus.RavenDB.Persistence.SubscriptionStorage;
 using NServiceBus.RavenDB.Tests;
 using NServiceBus.Unicast.Subscriptions;
-using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 using NServiceBus.Unicast.Subscriptions.RavenDB;
 using NUnit.Framework;
 
@@ -17,13 +16,13 @@ public class When_receiving_duplicate_subscription_messages : RavenDBPersistence
         var storage = new SubscriptionPersister(store);
 
         storage.Subscribe("testEndPoint@localhost", new List<MessageType>
-                {
-                    new MessageType("SomeMessageType", "1.0.0.0")
-                }, new SubscriptionStorageOptions(new ContextBag()));
+        {
+            new MessageType("SomeMessageType", "1.0.0.0")
+        }, new ContextBag());
         storage.Subscribe("testEndPoint@localhost", new List<MessageType>
-                {
-                    new MessageType("SomeMessageType", "1.0.0.0")
-                }, new SubscriptionStorageOptions(new ContextBag()));
+        {
+            new MessageType("SomeMessageType", "1.0.0.0")
+        }, new ContextBag());
 
         using (var session = store.OpenSession())
         {

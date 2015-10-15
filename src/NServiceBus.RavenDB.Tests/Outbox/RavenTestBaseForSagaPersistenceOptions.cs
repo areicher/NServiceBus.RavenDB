@@ -1,15 +1,10 @@
-﻿using NServiceBus.Extensibility;
-using NServiceBus.Outbox;
+﻿using NServiceBus.RavenDB.Outbox;
 using NServiceBus.RavenDB.Tests;
-using Raven.Client;
 
-public static class RavenTestBaseForOutboxStorageOptions
+static class RavenTestBaseForOutboxStorageOptions
 {
-    public static OutboxStorageOptions NewOptions(this RavenDBPersistenceTestBase testBase, out IDocumentSession session)
+    public static RavenDBOutboxTransaction CreateTransaction(this RavenDBPersistenceTestBase testBase)
     {
-        var context = new ContextBag();
-        session = testBase.OpenSession();
-        context.Set(session);
-        return new OutboxStorageOptions(context);
+        return new RavenDBOutboxTransaction(testBase.OpenSession());
     }
 }

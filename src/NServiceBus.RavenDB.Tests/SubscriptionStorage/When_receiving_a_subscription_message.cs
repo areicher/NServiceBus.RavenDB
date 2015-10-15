@@ -3,7 +3,6 @@ using NServiceBus.Extensibility;
 using NServiceBus.RavenDB.Persistence.SubscriptionStorage;
 using NServiceBus.RavenDB.Tests;
 using NServiceBus.Unicast.Subscriptions;
-using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 using NServiceBus.Unicast.Subscriptions.RavenDB;
 using NUnit.Framework;
 
@@ -23,7 +22,7 @@ public class When_receiving_a_subscription_message : RavenDBPersistenceTestBase
 
         var storage = new SubscriptionPersister(store);
 
-        storage.Subscribe(clientEndpoint, messageTypes, new SubscriptionStorageOptions(new ContextBag()));
+        storage.Subscribe(clientEndpoint, messageTypes, new ContextBag());
 
         using (var session = store.OpenSession())
         {

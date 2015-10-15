@@ -19,12 +19,13 @@ public class When_persisting_a_saga_entity_with_an_Enum_property : RavenDBPersis
         };
 
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+
+        var context = this.NewSagaPersistenceOptions(out session);
         var persister = new SagaPersister();
-        await persister.Save(entity, options);
+        await persister.Save(entity,this.CreateMetadata<SomeSaga>(), context);
         session.SaveChanges();
 
-        var savedEntity = await persister.Get<SagaData>(entity.Id, options);
+        var savedEntity = await persister.Get<SagaData>(entity.Id, context);
         Assert.AreEqual(entity.Status, savedEntity.Status);
     }
 

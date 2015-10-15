@@ -13,22 +13,22 @@ public class When_persisting_a_saga_entity_with_inherited_property : RavenDBPers
     public async Task Inherited_property_classes_should_be_persisted()
     {
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+        var options = this.NewSagaPersistenceOptions(out session);
         var persister = new SagaPersister();
         var entity = new SagaData
+        {
+            Id = Guid.NewGuid(),
+            PolymorphicRelatedProperty = new PolymorphicProperty
             {
-                Id = Guid.NewGuid(),
-                PolymorphicRelatedProperty = new PolymorphicProperty
-                    {
-                        SomeInt = 9
-                    }
-            };
-        await persister.Save(entity, options);
+                SomeInt = 9
+            }
+        };
+        await persister.Save(entity, this.CreateMetadata<SomeSaga>(), options);
         session.SaveChanges();
 
         var savedEntity = await persister.Get<SagaData>(entity.Id, options);
-        var expected = (PolymorphicProperty)entity.PolymorphicRelatedProperty;
-        var actual = (PolymorphicProperty)savedEntity.PolymorphicRelatedProperty;
+        var expected = (PolymorphicProperty) entity.PolymorphicRelatedProperty;
+        var actual = (PolymorphicProperty) savedEntity.PolymorphicRelatedProperty;
         Assert.AreEqual(expected.SomeInt, actual.SomeInt);
     }
 
@@ -41,10 +41,10 @@ public class When_persisting_a_saga_entity_with_inherited_property : RavenDBPers
 
     class SagaData : IContainSagaData
     {
+        public PolymorphicPropertyBase PolymorphicRelatedProperty { get; set; }
         public Guid Id { get; set; }
         public string Originator { get; set; }
         public string OriginalMessageId { get; set; }
-        public PolymorphicPropertyBase PolymorphicRelatedProperty { get; set; }
     }
 
     class PolymorphicProperty : PolymorphicPropertyBase
@@ -56,5 +56,4 @@ public class When_persisting_a_saga_entity_with_inherited_property : RavenDBPers
     {
         public virtual Guid Id { get; set; }
     }
-
 }

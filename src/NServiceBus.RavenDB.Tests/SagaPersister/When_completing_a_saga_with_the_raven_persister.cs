@@ -15,12 +15,12 @@ public class When_completing_a_saga_with_the_raven_persister : RavenDBPersistenc
         var sagaId = Guid.NewGuid();
 
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions<SomeSaga>(out session);
+        var options = this.NewSagaPersistenceOptions(out session);
         var persister = new SagaPersister();
         await persister.Save(new SagaData
         {
             Id = sagaId
-        }, options);
+        },this.CreateMetadata<SomeSaga>(), options);
         session.SaveChanges();
 
         var saga = await persister.Get<SagaData>(sagaId, options);
@@ -29,6 +29,8 @@ public class When_completing_a_saga_with_the_raven_persister : RavenDBPersistenc
 
         Assert.Null(await persister.Get<SagaData>(sagaId, options));
     }
+
+   
 
     class SomeSaga : Saga<SagaData>
     {
