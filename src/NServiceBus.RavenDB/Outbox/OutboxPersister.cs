@@ -13,7 +13,7 @@
         {
             this.documentStore = documentStore;
         }
-        public Task<OutboxMessage> Get(string messageId, ReadOnlyContextBag options)
+        public Task<OutboxMessage> Get(string messageId, ContextBag options)
         {
             OutboxRecord result;
             using (var session = documentStore.OpenSession())
@@ -34,7 +34,7 @@
         }
 
 
-        public Task<OutboxTransaction> BeginTransaction(ReadOnlyContextBag context)
+        public Task<OutboxTransaction> BeginTransaction(ContextBag context)
         {
             var session = documentStore.OpenSession();
 
@@ -45,7 +45,7 @@
             return Task.FromResult<OutboxTransaction>(transaction);
         }
 
-        public Task Store(OutboxMessage message, OutboxTransaction transaction, ReadOnlyContextBag context)
+        public Task Store(OutboxMessage message, OutboxTransaction transaction, ContextBag context)
         {
             var session = ((RavenDBOutboxTransaction)transaction).Session;
 
@@ -65,7 +65,7 @@
             return Task.FromResult(0);
         }
 
-        public Task SetAsDispatched(string messageId, ReadOnlyContextBag options)
+        public Task SetAsDispatched(string messageId, ContextBag options)
         {
             using (var session = documentStore.OpenSession())
             {
