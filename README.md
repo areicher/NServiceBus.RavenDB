@@ -1,6 +1,8 @@
 NServiceBus.RavenDB
 ======================
 
+## Forked to swap (hack) out MD5 usages to support FIPS compliance
+
 Persistence support for NServiceBus RavenDB
 
 ## How to use this library

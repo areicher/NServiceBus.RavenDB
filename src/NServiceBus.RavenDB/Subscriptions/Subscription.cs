@@ -4,6 +4,7 @@ namespace NServiceBus.RavenDB.Persistence.SubscriptionStorage
     using System.Collections.Generic;
     using System.Security.Cryptography;
     using System.Text;
+    using NServiceBus.RavenDB.Internal;
     using NServiceBus.Unicast.Subscriptions;
     using Raven.Imports.Newtonsoft.Json;
 
@@ -17,6 +18,7 @@ namespace NServiceBus.RavenDB.Persistence.SubscriptionStorage
 
         public List<Address> Clients { get; set; }
 
+/*
         public static string FormatId(MessageType messageType)
         {
             // use MD5 hash to get a 16-byte hash of the string
@@ -30,5 +32,14 @@ namespace NServiceBus.RavenDB.Persistence.SubscriptionStorage
                 return string.Format("Subscriptions/{0}", id);
             }
         }
+*/
+
+
+	    public static string FormatId(MessageType messageType)
+	    {
+		    // use MD5 hash to get a 16-byte hash of the string
+		    var hash = RavenIdUtil.HashString(messageType.TypeName + "/" + messageType.Version.Major);
+		    return string.Format("Subscriptions/{0}", hash);
+	    }
     }
 }
