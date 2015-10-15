@@ -13,7 +13,7 @@ public class When_persisting_a_saga_with_the_same_unique_property_as_a_completed
     public async Task It_should_persist_successfully()
     {
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions(out session);
+        var options = this.CreateContextWithSessionPresent(out session);
         var persister = new SagaPersister();
         var uniqueString = Guid.NewGuid().ToString();
         var saga1 = new SagaData
@@ -25,13 +25,13 @@ public class When_persisting_a_saga_with_the_same_unique_property_as_a_completed
         session.SaveChanges();
         session.Dispose();
 
-        options = this.NewSagaPersistenceOptions(out session);
+        options = this.CreateContextWithSessionPresent(out session);
         var saga = await persister.Get<SagaData>(saga1.Id, options);
         await persister.Complete(saga, options);
         session.SaveChanges();
         session.Dispose();
 
-        options = this.NewSagaPersistenceOptions(out session);
+        options = this.CreateContextWithSessionPresent(out session);
         var saga2 = new SagaData
         {
             Id = Guid.NewGuid(),

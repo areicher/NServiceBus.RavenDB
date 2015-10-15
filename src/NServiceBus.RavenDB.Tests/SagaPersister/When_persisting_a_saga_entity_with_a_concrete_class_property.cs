@@ -22,7 +22,7 @@ public class When_persisting_a_saga_entity_with_a_concrete_class_property : Rave
         };
 
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions(out session);
+        var options = this.CreateContextWithSessionPresent(out session);
         var persister = new SagaPersister();
         await persister.Save(entity, this.CreateMetadata<SomeSaga>(), options);
         session.SaveChanges();

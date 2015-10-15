@@ -14,7 +14,7 @@ public class When_persisting_a_saga_with_the_same_unique_property_as_another_sag
     public async Task It_should_enforce_uniqueness()
     {
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions(out session);
+        var options = this.CreateContextWithSessionPresent(out session);
         var persister = new SagaPersister();
         var uniqueString = Guid.NewGuid().ToString();
 
@@ -30,7 +30,7 @@ public class When_persisting_a_saga_with_the_same_unique_property_as_another_sag
 
         Assert.Throws<ConcurrencyException>(() =>
         {
-            options = this.NewSagaPersistenceOptions(out session);
+            options = this.CreateContextWithSessionPresent(out session);
             var saga2 = new SagaData
             {
                 Id = Guid.NewGuid(),

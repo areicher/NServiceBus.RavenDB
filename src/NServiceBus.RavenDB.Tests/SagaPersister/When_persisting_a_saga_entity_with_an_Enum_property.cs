@@ -20,7 +20,7 @@ public class When_persisting_a_saga_entity_with_an_Enum_property : RavenDBPersis
 
         IDocumentSession session;
 
-        var context = this.NewSagaPersistenceOptions(out session);
+        var context = this.CreateContextWithSessionPresent(out session);
         var persister = new SagaPersister();
         await persister.Save(entity,this.CreateMetadata<SomeSaga>(), context);
         session.SaveChanges();

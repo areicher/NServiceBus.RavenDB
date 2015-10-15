@@ -14,8 +14,7 @@ namespace NServiceBus.SagaPersisters.RavenDB
 
     class SagaPersister : ISagaPersister
     {
-        internal const string UniqueValueMetadataKey = "NServiceBus-UniqueValue";
-        const string UniqueDocIdKey = "NServiceBus-UnqieDocId";
+        const string UniqueDocIdKey = "NServiceBus-UniqueDocId";
 
         public Task Save(IContainSagaData saga, SagaMetadata metadata, ContextBag context)
         {

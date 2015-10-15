@@ -13,7 +13,7 @@ public class When_updating_a_saga_without_unique_properties : RavenDBPersistence
     public async Task It_should_persist_successfully()
     {
         IDocumentSession session;
-        var options = this.NewSagaPersistenceOptions(out session);
+        var options = this.CreateContextWithSessionPresent(out session);
         var persister = new SagaPersister();
         var uniqueString = Guid.NewGuid().ToString();
         var anotherUniqueString = Guid.NewGuid().ToString();
