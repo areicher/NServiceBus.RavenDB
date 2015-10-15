@@ -23,7 +23,12 @@ namespace NServiceBus.SagaPersisters.RavenDB
 
             session.Store(saga);
 
-            var correlationProperty = metadata.CorrelationProperties.Single();
+            var correlationProperty = metadata.CorrelationProperties.SingleOrDefault();
+
+            if (correlationProperty == null)
+            {
+                return Task.FromResult(0);
+            }
 
             var uniqueProperty = GetUniqueProperty(metadata, correlationProperty);
 
@@ -42,6 +47,7 @@ namespace NServiceBus.SagaPersisters.RavenDB
             });
 
             session.Advanced.GetMetadataFor(saga)[UniqueDocIdKey] = id;
+
 
             return Task.FromResult(0);
         }
